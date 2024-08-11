@@ -5,7 +5,7 @@
 class Window
 {
 public:
-    Window(int width, int height, const char *title);
+    Window(int width, int height, const char *title, bool borderless = false);
     ~Window();
 
     bool Initialize();
@@ -19,4 +19,5 @@ private:
     int width, height;
     const char *title;
     GLFWwindow *window;
+    bool borderless;
 };

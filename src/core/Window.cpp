@@ -1,8 +1,8 @@
 #include "Window.h"
 #include <iostream>
 
-Window::Window(int width, int height, const char *title)
-    : width(width), height(height), title(title), window(nullptr) {}
+Window::Window(int width, int height, const char *title, bool borderless)
+    : width(width), height(height), title(title), window(nullptr), borderless(borderless) {}
 
 Window::~Window()
 {
@@ -22,7 +22,21 @@ bool Window::Initialize()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    if (borderless)
+    {
+        const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        window = glfwCreateWindow(mode->width, mode->height, title, nullptr, nullptr);
+        if (window)
+        {
+            glfwSetWindowPos(window, 0, 0); // Position window at top-left corner
+        }
+    }
+    else
+    {
+        window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    }
+
     if (!window)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;

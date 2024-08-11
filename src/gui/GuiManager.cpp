@@ -35,19 +35,21 @@ void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    // Begin ImGui frame
+    ImGui::Begin("Hello, world!");
+    ImGui::Text("This is some text in a window.");
+    ImGui::End();
+
     ImGuizmo::BeginFrame();
 
-    // Example 3D manipulation
-    static float matrix[16] =
-        {
-            1.f, 0.f, 0.f, 0.f,
-            0.f, 1.f, 0.f, 0.f,
-            0.f, 0.f, 1.f, 0.f,
-            0.f, 0.f, 0.f, 1.f};
+    // Example of manipulating a matrix using ImGuizmo
+    static float matrix[16] = {
+        1.f, 0.f, 0.f, 0.f,
+        0.f, 1.f, 0.f, 0.f,
+        0.f, 0.f, 1.f, 0.f,
+        0.f, 0.f, 0.f, 1.f};
 
     ImGuizmo::Manipulate(viewMatrix, projectionMatrix, ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, matrix);
-
-    // More ImGui and ImGuizmo code...
 }
 
 void GUIManager::Render()

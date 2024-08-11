@@ -10,7 +10,7 @@ Engine::~Engine()
 
 bool Engine::Initialize()
 {
-    window = new Window(800, 600, "Edu Game Engine");
+    window = new Window(800, 600, "Edu Game Engine", false); // Set fullscreen to true
     if (!window->Initialize())
     {
         return false;
