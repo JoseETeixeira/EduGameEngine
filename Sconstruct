@@ -1,0 +1,54 @@
+import os
+import shutil
+
+def copy_dll(target, source, env):
+    # Path to the GLEW DLL
+    glew_dll_path = os.path.join('include', 'glew', 'bin', 'glew32.dll')
+    # Path to the build directory
+    target_dir = os.path.dirname(str(target[0]))
+
+    # Copy the DLL to the build directory
+    shutil.copy(glew_dll_path, target_dir)
+
+# Environment setup
+env = Environment()
+
+# Set the runtime library flags for MSVC
+if env['PLATFORM'] == 'win32':
+    env.Append(CXXFLAGS=['/EHsc'])  # Use /EHsc for exception handling in MSVC
+
+    # Ensure consistent runtime library linking
+    env.Append(CXXFLAGS=['/MD'])  # Or /MT, depending on how GLFW was built
+
+# Include paths for GLFW, GLEW, and GLM
+env.Append(CPPPATH=[
+    'include/glfw/include',    # Path to GLFW include directory
+    'include/glew/include',    # Path to GLEW include directory
+    'include/glm'              # Path to GLM include directory
+])
+
+# Library paths for GLFW, GLEW, and OpenGL
+env.Append(LIBPATH=[
+    'include/glfw/lib',        # Path to GLFW library directory
+    'include/glew/lib'         # Path to GLEW library directory
+])
+
+# Link the necessary libraries
+env.Append(LIBS=[
+    'glfw3',      # GLFW library
+    'glew32',     # GLEW library
+    'opengl32',   # OpenGL library on Windows
+    'glu32',      # OpenGL Utility Library (optional)
+    'user32',     # Windows User API
+    'gdi32',      # Windows GDI
+    'shell32',    # Windows Shell API
+    'kernel32',   # Windows Kernel API
+    'ucrt',       # Universal C Runtime Library (if needed)
+])
+
+# Specify source files
+sources = Glob('src/*.cpp') + Glob('src/**/*.cpp')
+
+# Create the build target
+program = env.Program(target='build/EduGameEngine', source=sources)
+env.AddPostAction(program, copy_dll)
