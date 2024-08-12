@@ -6,6 +6,8 @@
 #include <ImGuizmo.h>
 #include <nfd.h> // Native File Dialog library (https://github.com/btzy/nativefiledialog-extended)
 #include <iostream>
+#include <filesystem>
+#include <fstream>
 
 GUIManager::GUIManager() : isPlaying(false) {}
 
@@ -27,6 +29,11 @@ bool GUIManager::Initialize(Window *window)
 
     ImGui_ImplGlfw_InitForOpenGL(window->GetGLFWWindow(), true);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    // Set the window to take up the whole screen in windowed mode
+    int screenWidth, screenHeight;
+    glfwGetWindowSize(window->GetGLFWWindow(), &screenWidth, &screenHeight);
+    glfwSetWindowMonitor(window->GetGLFWWindow(), nullptr, 0, 0, screenWidth, screenHeight, 0);
 
     return true;
 }
@@ -166,29 +173,52 @@ void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectio
     ImGui::Begin("Sources", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
     {
         ImGui::Text("Sources");
-        // Display available assets
-        if (ImGui::TreeNode("Asset1"))
+
+        // Example of displaying and interacting with the filesystem
+        static std::string currentDirectory = std::filesystem::current_path().string();
+
+        ImGui::Text("Current Directory: %s", currentDirectory.c_str());
+        ImGui::Separator();
+
+        // Listing the directory contents
+        for (const auto &entry : std::filesystem::directory_iterator(currentDirectory))
         {
-            if (ImGui::Selectable("Add to Outline"))
+            if (entry.is_directory())
             {
-                // Handle adding Asset1 to the outline
+                if (ImGui::TreeNode(entry.path().filename().string().c_str()))
+                {
+                    ImGui::TreePop();
+                }
             }
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNode("Asset2"))
-        {
-            if (ImGui::Selectable("Add to Outline"))
+            else
             {
-                // Handle adding Asset2 to the outline
+                ImGui::Text("%s", entry.path().filename().string().c_str());
             }
-            ImGui::TreePop();
         }
 
         ImGui::Separator();
 
-        if (ImGui::Button("Import Asset"))
+        // Right-click context menu to create folders or import files
+        if (ImGui::BeginPopupContextWindow())
         {
-            ImportAsset(); // Call the method to import an asset
+            if (ImGui::MenuItem("New Folder"))
+            {
+                std::filesystem::create_directory(currentDirectory + "/New Folder");
+            }
+
+            if (ImGui::MenuItem("Import Asset"))
+            {
+                ImportAsset(); // Handle importing an asset
+            }
+
+            if (ImGui::MenuItem("Create Player Controller"))
+            {
+                std::ofstream file(currentDirectory + "/PlayerController.cpp");
+                file << "// Player Controller Implementation";
+                file.close();
+            }
+
+            ImGui::EndPopup();
         }
     }
     ImGui::End();

@@ -11,7 +11,8 @@ def copy_dll(target, source, env):
     shutil.copy(glew_dll_path, target_dir)
 
 # Environment setup
-env = Environment()
+env = Environment(CXXFLAGS='/std:c++17')
+
 
 # Set the runtime library flags for MSVC
 if env['PLATFORM'] == 'win32':
