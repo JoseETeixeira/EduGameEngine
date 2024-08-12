@@ -7,7 +7,7 @@
 #include <nfd.h> // Native File Dialog library (https://github.com/btzy/nativefiledialog-extended)
 #include <iostream>
 
-GUIManager::GUIManager() {}
+GUIManager::GUIManager() : isPlaying(false) {}
 
 GUIManager::~GUIManager()
 {
@@ -30,13 +30,23 @@ bool GUIManager::Initialize(Window *window)
 
     return true;
 }
+
 void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix)
 {
+    // Start a new ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // Begin ImGui frame
+    // Editor GUI - Interface for the game engine
+    RenderEditorGUI(viewMatrix, projectionMatrix);
+
+    // Render ImGui
+    ImGui::Render();
+}
+
+void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectionMatrix)
+{
     // 1. Create the Menu Bar
     if (ImGui::BeginMainMenuBar())
     {
@@ -80,12 +90,14 @@ void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix
 
     if (ImGui::Button("Play"))
     {
-        // Handle play action
+        // Start play mode
+        isPlaying = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Stop"))
     {
-        // Handle stop action
+        // Stop play mode
+        isPlaying = false;
     }
 
     ImGui::End();
@@ -122,8 +134,15 @@ void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix
         // Main Editor section
         ImGui::BeginChild("Main Editor", ImVec2(ContentRegionAvail.x * 0.5f, ContentRegionAvail.y), true);
         {
-            ImGui::Text("Main Editor");
-            // Insert game editor content here (e.g., rendering game scene, handling input, etc.)
+            if (isPlaying)
+            {
+                RenderApplicationGUI(); // Render the Application GUI inside the Main Editor
+            }
+            else
+            {
+                ImGui::Text("Main Editor");
+                // Insert game editor content here (e.g., rendering game scene, handling input, etc.)
+            }
         }
         ImGui::EndChild();
 
@@ -182,12 +201,21 @@ void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix
         0.f, 0.f, 1.f, 0.f,
         0.f, 0.f, 0.f, 1.f};
 
-    ImGuizmo::Manipulate(viewMatrix, projectionMatrix, ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, matrix);
+    if (!isPlaying)
+    {
+        ImGuizmo::Manipulate(viewMatrix, projectionMatrix, ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, matrix);
+    }
+}
+
+void GUIManager::RenderApplicationGUI()
+{
+    // Application GUI - This is where the game itself would be rendered
+    ImGui::Text("Rendering the game inside the Main Editor.");
+    // Implement the game's rendering logic here
 }
 
 void GUIManager::Render()
 {
-    ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
