@@ -1,5 +1,6 @@
 #pragma once
 #include "../core/Window.h"
+#include <string>
 
 class GUIManager
 {
@@ -10,4 +11,6 @@ public:
     bool Initialize(Window *window);
     void NewFrame(const float *viewMatrix, const float *projectionMatrix);
     void Render();
+    void ImportAsset();
+    void AddAssetToScene(const std::string &assetPath);
 };

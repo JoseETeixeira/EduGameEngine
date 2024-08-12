@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "*.gd": "gdscript",
+    "ostream": "cpp"
+  }
+}

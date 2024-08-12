@@ -28,6 +28,7 @@ env.Append(CPPPATH=[
     'include/imgui',               # Path to ImGui include directory
     'include/imgui/backends',      # Path to ImGui backends directory
     'include/imguizmo',            # Path to ImGuizmo include directory
+    'include/nfd/src/include',     # Path to Native File Dialog include directory
 ])
 
 # Library paths for GLFW, GLEW, and OpenGL
@@ -47,6 +48,7 @@ env.Append(LIBS=[
     'shell32',    # Windows Shell API
     'kernel32',   # Windows Kernel API
     'ucrt',       # Universal C Runtime Library (if needed)
+    'ole32'       # Link against ole32.lib for COM functions
 ])
 
 # Specify source files
@@ -57,7 +59,8 @@ imgui_sources = [
     'include/imgui/imgui_tables.cpp',
     'include/imgui/imgui_demo.cpp',
     'include/imgui/backends/imgui_impl_glfw.cpp',
-    'include/imgui/backends/imgui_impl_opengl3.cpp'
+    'include/imgui/backends/imgui_impl_opengl3.cpp',
+    'include/nfd/src/nfd_win.cpp'
 ]
 
 imguizmo_sources = [

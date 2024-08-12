@@ -4,6 +4,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
+#include <nfd.h> // Native File Dialog library (https://github.com/btzy/nativefiledialog-extended)
+#include <iostream>
 
 GUIManager::GUIManager() {}
 
@@ -90,11 +92,11 @@ void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix
 
     // 3. Divide the main area into three sections: Outline, Main Editor, and Details
     ImGui::SetNextWindowPos(ImVec2(0, 60)); // Start below the buttons
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 60));
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 160));
     ImGui::Begin("Workspace", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
     {
         ImVec2 ContentRegionAvail = ImGui::GetContentRegionAvail();
-        float columnWidth = ContentRegionAvail.x * 0.3f;
+        float columnWidth = ContentRegionAvail.x * 0.25f;
 
         // Outline section
         ImGui::BeginChild("Outline", ImVec2(columnWidth, ContentRegionAvail.y), true);
@@ -128,15 +130,47 @@ void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix
         ImGui::SameLine();
 
         // Details section
-        ImGui::BeginChild("Details", ImVec2(ContentRegionAvail.x * 0.2f, ContentRegionAvail.y), true);
+        ImGui::BeginChild("Details", ImVec2(ContentRegionAvail.x * 0.25f, ContentRegionAvail.y), true);
         {
             ImGui::Text("Details");
             // Show details of selected nodes (e.g., position, components, etc.)
             ImGui::Text("Transform:");
-
             // Add more component fields as necessary
         }
         ImGui::EndChild();
+    }
+    ImGui::End();
+
+    // 4. Sources section
+    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 100)); // Position at the bottom
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 100));    // Take up the full width
+    ImGui::Begin("Sources", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    {
+        ImGui::Text("Sources");
+        // Display available assets
+        if (ImGui::TreeNode("Asset1"))
+        {
+            if (ImGui::Selectable("Add to Outline"))
+            {
+                // Handle adding Asset1 to the outline
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Asset2"))
+        {
+            if (ImGui::Selectable("Add to Outline"))
+            {
+                // Handle adding Asset2 to the outline
+            }
+            ImGui::TreePop();
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Import Asset"))
+        {
+            ImportAsset(); // Call the method to import an asset
+        }
     }
     ImGui::End();
 
@@ -155,4 +189,38 @@ void GUIManager::Render()
 {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void GUIManager::ImportAsset()
+{
+    nfdu8char_t *outPath = NULL;
+    const nfdu8filteritem_t filterItem[3] = {
+        {"Image Files", "png,jpg"},
+        {"Object Files", "obj"},
+    };
+
+    nfdresult_t result = NFD_OpenDialogU8(&outPath, filterItem, 2, NULL); // Filter for relevant asset types
+    if (result == NFD_OKAY)
+    {
+        std::string assetPath(reinterpret_cast<char *>(outPath));
+        free(outPath); // Free memory allocated by NFD
+
+        // Implement your logic to import and handle the asset
+        AddAssetToScene(assetPath);
+    }
+    else if (result == NFD_CANCEL)
+    {
+        std::cout << "User canceled file dialog." << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error: " << NFD_GetError() << std::endl;
+    }
+}
+
+void GUIManager::AddAssetToScene(const std::string &assetPath)
+{
+    // Implement the logic to add the asset to the scene or outline
+    // For example, create a new node in the outline and attach the asset to it
+    std::cout << "Asset imported: " << assetPath << std::endl;
 }
