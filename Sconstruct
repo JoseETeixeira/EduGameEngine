@@ -30,12 +30,14 @@ env.Append(CPPPATH=[
     'include/imgui/backends',      # Path to ImGui backends directory
     'include/imguizmo',            # Path to ImGuizmo include directory
     'include/nfd/src/include',     # Path to Native File Dialog include directory
+    'include/nanosvg/src',          # Path to NanoSVG include directory
 ])
 
 # Library paths for GLFW, GLEW, and OpenGL
 env.Append(LIBPATH=[
     'include/glfw/lib',        # Path to GLFW library directory
-    'include/glew/lib'         # Path to GLEW library directory
+    'include/glew/lib',         # Path to GLEW library directory
+    'include/nanosvg/lib',      # Path to NanoSVG library directory
 ])
 
 # Link the necessary libraries
@@ -49,7 +51,9 @@ env.Append(LIBS=[
     'shell32',    # Windows Shell API
     'kernel32',   # Windows Kernel API
     'ucrt',       # Universal C Runtime Library (if needed)
-    'ole32'       # Link against ole32.lib for COM functions
+    'ole32',       # Link against ole32.lib for COM functions
+    'nanosvg',     # NanoSVG library
+    'nanosvgrast', # NanoSVG rasterizer library
 ])
 
 # Specify source files

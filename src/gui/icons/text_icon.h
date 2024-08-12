@@ -1,0 +1,8 @@
+#ifndef TEXT_ICON_H
+#define TEXT_ICON_H
+
+const char *text_icon_svg = R"svg(
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="256" height="256"><g style="stroke:none;stroke-width:0;stroke-dasharray:none;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;fill:none;fill-rule:nonzero;opacity:1"><path d="M77.474 17.28 61.526 1.332A4.516 4.516 0 0 0 58.311 0H15.742a4.553 4.553 0 0 0-4.548 4.548v80.904A4.553 4.553 0 0 0 15.742 90h58.516a4.554 4.554 0 0 0 4.549-4.548V20.496a4.517 4.517 0 0 0-1.333-3.216zM61.073 5.121l12.611 12.612H62.35a1.278 1.278 0 0 1-1.276-1.277V5.121zM15.742 3h42.332v13.456a4.281 4.281 0 0 0 4.276 4.277h13.457v33.2H14.194V4.548A1.55 1.55 0 0 1 15.742 3zm58.516 84H15.742a1.55 1.55 0 0 1-1.548-1.548V56.934h61.613v28.519A1.55 1.55 0 0 1 74.258 87z" style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;fill:#FFFFFF;fill-rule:nonzero;opacity:1" transform="matrix(2.81 0 0 2.81 1.407 1.407)"/><path d="M34.604 62.687h-8.816a1.5 1.5 0 1 0 0 3h2.908v15.164a1.5 1.5 0 1 0 3 0V65.687h2.908a1.5 1.5 0 1 0 0-3zM46.69 72.519l4.021-7.599a1.5 1.5 0 0 0-2.652-1.402l-3.065 5.794-3.066-5.794a1.5 1.5 0 0 0-2.651 1.402l4.02 7.599-4.02 7.599a1.5 1.5 0 1 0 2.651 1.402l3.066-5.794 3.065 5.794a1.5 1.5 0 1 0 2.652-1.402l-4.021-7.599zM64.212 62.687h-8.815a1.5 1.5 0 0 0 0 3h2.908v15.164a1.5 1.5 0 0 0 3 0V65.687h2.907a1.5 1.5 0 0 0 0-3z" style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;fill:#FFFFFF;fill-rule:nonzero;opacity:1" transform="matrix(2.81 0 0 2.81 1.407 1.407)"/></g></svg>
+)svg";
+
+#endif // TEXT_ICON_H

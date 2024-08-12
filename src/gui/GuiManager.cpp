@@ -5,9 +5,85 @@
 #include <imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
 #include <nfd.h> // Native File Dialog library (https://github.com/btzy/nativefiledialog-extended)
-#include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <nanosvgrast.h>
+#include <GL/gl.h>
+#include <vector>
+#include <iostream>
+
+// Icons
+#include "icons/attachment_icon.h"
+#include "icons/folder_icon.h"
+#include "icons/jpg_icon.h"
+#include "icons/mp4_icon.h"
+#include "icons/png_icon.h"
+#include "icons/text_icon.h"
+
+GLuint folderIconTextureID;
+GLuint textFileIconTextureID;
+GLuint pngFileIconTextureID;
+GLuint jpgFileIconTextureID;
+GLuint attachmentIconTextureID;
+
+GLuint LoadTextureFromSVG(const std::string &svgData)
+{
+    // Parse the SVG from the provided data
+    NSVGimage *image = nsvgParse((char *)svgData.c_str(), "px", 96.0f);
+    if (!image)
+    {
+        std::cerr << "Failed to parse SVG data." << std::endl;
+        return 0; // Return 0 on failure
+    }
+
+    // Create a rasterizer
+    NSVGrasterizer *rast = nsvgCreateRasterizer();
+    if (!rast)
+    {
+        std::cerr << "Failed to create rasterizer." << std::endl;
+        nsvgDelete(image);
+        return 0;
+    }
+
+    int width = (int)image->width;
+    int height = (int)image->height;
+
+    // Allocate memory for the bitmap
+    std::vector<unsigned char> bitmap(width * height * 4); // 4 bytes per pixel (RGBA)
+
+    // Rasterize the SVG into the bitmap
+    nsvgRasterize(rast, image, 0, 0, 1, bitmap.data(), width, height, width * 4);
+
+    // Clean up the rasterizer and the image after rasterization
+    nsvgDeleteRasterizer(rast);
+    nsvgDelete(image);
+
+    // Generate an OpenGL texture
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, bitmap.data());
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Unbind the texture
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return textureID;
+}
+
+void GUIManager::InitializeIcons()
+{
+    folderIconTextureID = LoadTextureFromSVG(folder_icon_svg);
+    textFileIconTextureID = LoadTextureFromSVG(text_icon_svg);
+    pngFileIconTextureID = LoadTextureFromSVG(png_icon_svg);
+    jpgFileIconTextureID = LoadTextureFromSVG(jpg_icon_svg);
+    attachmentIconTextureID = LoadTextureFromSVG(attachment_icon_svg);
+}
 
 GUIManager::GUIManager() : isPlaying(false) {}
 
@@ -35,6 +111,7 @@ bool GUIManager::Initialize(Window *window)
     glfwGetWindowSize(window->GetGLFWWindow(), &screenWidth, &screenHeight);
     glfwSetWindowMonitor(window->GetGLFWWindow(), nullptr, 0, 0, screenWidth, screenHeight, 0);
 
+    InitializeIcons();
     return true;
 }
 
@@ -167,61 +244,8 @@ void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectio
     }
     ImGui::End();
 
-    // 4. Sources section
-    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 100)); // Position at the bottom
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 100));    // Take up the full width
-    ImGui::Begin("Sources", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-    {
-        ImGui::Text("Sources");
-
-        // Example of displaying and interacting with the filesystem
-        static std::string currentDirectory = std::filesystem::current_path().string();
-
-        ImGui::Text("Current Directory: %s", currentDirectory.c_str());
-        ImGui::Separator();
-
-        // Listing the directory contents
-        for (const auto &entry : std::filesystem::directory_iterator(currentDirectory))
-        {
-            if (entry.is_directory())
-            {
-                if (ImGui::TreeNode(entry.path().filename().string().c_str()))
-                {
-                    ImGui::TreePop();
-                }
-            }
-            else
-            {
-                ImGui::Text("%s", entry.path().filename().string().c_str());
-            }
-        }
-
-        ImGui::Separator();
-
-        // Right-click context menu to create folders or import files
-        if (ImGui::BeginPopupContextWindow())
-        {
-            if (ImGui::MenuItem("New Folder"))
-            {
-                std::filesystem::create_directory(currentDirectory + "/New Folder");
-            }
-
-            if (ImGui::MenuItem("Import Asset"))
-            {
-                ImportAsset(); // Handle importing an asset
-            }
-
-            if (ImGui::MenuItem("Create Player Controller"))
-            {
-                std::ofstream file(currentDirectory + "/PlayerController.cpp");
-                file << "// Player Controller Implementation";
-                file.close();
-            }
-
-            ImGui::EndPopup();
-        }
-    }
-    ImGui::End();
+    // Sources section
+    RenderSources();
 
     // Example of manipulating a matrix using ImGuizmo
     ImGuizmo::BeginFrame();
@@ -247,6 +271,106 @@ void GUIManager::RenderApplicationGUI()
 void GUIManager::Render()
 {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void GUIManager::RenderSources()
+{
+    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 100)); // Position at the bottom
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 100));    // Take up the full width
+    ImGui::Begin("Sources", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    {
+        ImGui::Text("Sources");
+
+        // Variables for directory handling
+        static std::string currentDirectory = std::filesystem::current_path().string();
+        static std::vector<std::string> directoryStack;
+        std::vector<std::filesystem::directory_entry> items;
+
+        // Reading the current directory
+        for (const auto &entry : std::filesystem::directory_iterator(currentDirectory))
+        {
+            items.push_back(entry);
+        }
+
+        int columns = 5; // Number of columns
+        ImGui::Columns(columns, nullptr, false);
+
+        for (const auto &item : items)
+        {
+            GLuint iconTextureID = attachmentIconTextureID; // Default to attachment icon
+
+            if (item.is_directory())
+            {
+                iconTextureID = folderIconTextureID; // Use folder icon
+            }
+            else
+            {
+                std::string extension = item.path().extension().string();
+                if (extension == ".txt")
+                {
+                    iconTextureID = textFileIconTextureID;
+                }
+                else if (extension == ".png")
+                {
+                    iconTextureID = pngFileIconTextureID;
+                }
+                else if (extension == ".jpg" || extension == ".jpeg")
+                {
+                    iconTextureID = jpgFileIconTextureID;
+                }
+            }
+
+            // Render the icon
+            ImGui::Image((void *)(intptr_t)iconTextureID, ImVec2(50, 50));
+
+            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+            {
+                if (item.is_directory())
+                {
+                    // Navigate into the directory
+                    directoryStack.push_back(currentDirectory);
+                    currentDirectory = item.path().string();
+                }
+                else
+                {
+                    // Handle file selection
+                    selectedAsset = item.path().string(); // This should be valid now
+                }
+            }
+
+            ImGui::TextWrapped(item.path().filename().string().c_str());
+            ImGui::NextColumn();
+        }
+
+        ImGui::Columns(1);
+        ImGui::Separator();
+
+        if (!directoryStack.empty() && ImGui::Button("Up"))
+        {
+            // Navigate up one directory level
+            currentDirectory = directoryStack.back();
+            directoryStack.pop_back();
+        }
+
+        if (ImGui::Button("Import Asset"))
+        {
+            ImportAsset(); // Call the method to import an asset
+        }
+
+        if (ImGui::BeginPopupContextWindow("Sources Context Menu"))
+        {
+            if (ImGui::MenuItem("Create Folder"))
+            {
+                CreateFolder();
+            }
+            if (ImGui::MenuItem("New Player Controller"))
+            {
+                CreatePlayerController();
+            }
+            ImGui::EndPopup();
+        }
+    }
+    ImGui::End();
 }
 
 void GUIManager::ImportAsset()
@@ -281,4 +405,20 @@ void GUIManager::AddAssetToScene(const std::string &assetPath)
     // Implement the logic to add the asset to the scene or outline
     // For example, create a new node in the outline and attach the asset to it
     std::cout << "Asset imported: " << assetPath << std::endl;
+}
+
+// Create a new folder in the current working directory
+void GUIManager::CreateFolder()
+{
+    std::string folderName = "New Folder"; // Placeholder name
+    std::filesystem::create_directory(std::filesystem::current_path() / folderName);
+}
+
+// Create a new player controller file
+void GUIManager::CreatePlayerController()
+{
+    std::string fileName = "PlayerController.cpp";
+    std::ofstream file(fileName);
+    file << "// Player Controller Code" << std::endl;
+    file.close();
 }
