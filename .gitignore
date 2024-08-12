@@ -1,5 +1,6 @@
-# Ignore all .obj files
+src/**/*.obj
+src/**/*.o
+include/**/*.obj
 *.obj
-
-# Ignore all .exe files
+src/*/**.obj
 *.exe
