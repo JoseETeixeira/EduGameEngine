@@ -11,6 +11,8 @@
 #include <GL/gl.h>
 #include <vector>
 #include <iostream>
+#include "../camera/camera.h"
+#include <gtc/type_ptr.hpp>
 
 // Icons
 #include "icons/attachment_icon.h"
@@ -91,7 +93,10 @@ void GUIManager::InitializeIcons()
     importArrowIconTextureID = LoadTextureFromSVG(import_arrow_icon_svg);
 }
 
-GUIManager::GUIManager() : isPlaying(false) {}
+GUIManager::GUIManager() : camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f)
+{
+    isPlaying = false;
+}
 
 GUIManager::~GUIManager()
 {
@@ -122,7 +127,7 @@ bool GUIManager::Initialize(Window *window)
     return true;
 }
 
-void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix)
+void GUIManager::NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
     // Start a new ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -136,7 +141,7 @@ void GUIManager::NewFrame(const float *viewMatrix, const float *projectionMatrix
     ImGui::Render();
 }
 
-void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectionMatrix)
+void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
     // 1. Create the Menu Bar
     if (ImGui::BeginMainMenuBar())
@@ -181,74 +186,31 @@ void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectio
 
     if (ImGui::Button("Play"))
     {
-        // Start play mode
         isPlaying = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Stop"))
     {
-        // Stop play mode
         isPlaying = false;
     }
 
     ImGui::End();
 
-    // 3. Divide the main area into three sections: Outline, Main Editor, and Details using columns
+    // 3. Main area with resizable panels
     ImGui::SetNextWindowPos(ImVec2(0, 60));                                                            // Start below the buttons
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 60)); // Use full height below the controls
     ImGui::Begin("Workspace", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
     {
-        ImGui::BeginChild("WorkspaceContent", ImVec2(0, ImGui::GetContentRegionAvail().y - 100), false);
+        // Workspace content, takes all the space except for the space used by the Sources panel
+        ImGui::BeginChild("WorkspaceContent", ImVec2(0, ImGui::GetContentRegionAvail().y - 100), true); // Leaves space for Sources
         {
             ImGui::Columns(3, nullptr, true); // 3 columns with resizable splitters
 
-            // Outline section
-            ImGui::BeginChild("Outline", ImVec2(0, 0), true);
-            {
-                ImGui::Text("Outline");
-                // Add nodes, etc.
-                if (ImGui::TreeNode("Node1"))
-                {
-                    ImGui::Text("Node1 Child");
-                    ImGui::TreePop();
-                }
-                if (ImGui::TreeNode("Node2"))
-                {
-                    ImGui::Text("Node2 Child");
-                    ImGui::TreePop();
-                }
-                // You can add options to add/remove nodes
-            }
-            ImGui::EndChild();
-
+            RenderOutlinePanel(); // Outline section
             ImGui::NextColumn();
-
-            // Main Editor section
-            ImGui::BeginChild("Main Editor", ImVec2(0, 0), true);
-            {
-                if (isPlaying)
-                {
-                    RenderApplicationGUI(); // Render the Application GUI inside the Main Editor
-                }
-                else
-                {
-                    ImGui::Text("Main Editor");
-                    // Insert game editor content here (e.g., rendering game scene, handling input, etc.)
-                }
-            }
-            ImGui::EndChild();
-
+            RenderMainEditorPanel(viewMatrix, projectionMatrix); // Main Editor section with tabs
             ImGui::NextColumn();
-
-            // Details section
-            ImGui::BeginChild("Details", ImVec2(0, 0), true);
-            {
-                ImGui::Text("Details");
-                // Show details of selected nodes (e.g., position, components, etc.)
-                ImGui::Text("Transform:");
-                // Add more component fields as necessary
-            }
-            ImGui::EndChild();
+            RenderDetailsPanel(); // Details section
 
             ImGui::Columns(1); // End columns
         }
@@ -258,26 +220,105 @@ void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectio
         RenderSources();
     }
     ImGui::End();
+}
 
-    // Example of manipulating a matrix using ImGuizmo
-    ImGuizmo::BeginFrame();
-    static float matrix[16] = {
-        1.f, 0.f, 0.f, 0.f,
-        0.f, 1.f, 0.f, 0.f,
-        0.f, 0.f, 1.f, 0.f,
-        0.f, 0.f, 0.f, 1.f};
-
-    if (!isPlaying)
+void GUIManager::RenderOutlinePanel()
+{
+    ImGui::BeginChild("Outline", ImVec2(0, 0), true);
     {
-        ImGuizmo::Manipulate(viewMatrix, projectionMatrix, ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, matrix);
+        ImGui::Text("Outline");
+        if (ImGui::TreeNode("Node1"))
+        {
+            ImGui::Text("Node1 Child");
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Node2"))
+        {
+            ImGui::Text("Node2 Child");
+            ImGui::TreePop();
+        }
     }
+    ImGui::EndChild();
+}
+
+void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
+{
+    ImGui::BeginChild("Main Editor", ImVec2(0, 0), true);
+    {
+        if (ImGui::BeginTabBar("MainEditorTabs"))
+        {
+            if (ImGui::BeginTabItem("Scene"))
+            {
+                // Ensure the grid is rendered within the ImGui window
+                Render3DGrid(viewMatrix, projectionMatrix);
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Game"))
+            {
+                if (isPlaying)
+                {
+                    RenderApplicationGUI(); // Render the Application GUI inside the Game tab
+                }
+                else
+                {
+                    ImGui::Text("Game view will appear here.");
+                }
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
+    }
+    ImGui::EndChild();
+}
+
+void GUIManager::RenderDetailsPanel()
+{
+    ImGui::BeginChild("Details", ImVec2(0, 0), true);
+    {
+        ImGui::Text("Details");
+        ImGui::Text("Transform:");
+        // Add more component fields as necessary
+    }
+    ImGui::EndChild();
 }
 
 void GUIManager::RenderApplicationGUI()
 {
     // Application GUI - This is where the game itself would be rendered
-    ImGui::Text("Rendering the game inside the Main Editor.");
+    ImGui::Text("Rendering the game inside the Game tab.");
     // Implement the game's rendering logic here
+}
+
+void GUIManager::Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
+{
+    // Use the provided view and projection matrices
+    glm::mat4 view = viewMatrix;
+    glm::mat4 projection = projectionMatrix;
+
+    // Ensure the grid renders within the ImGui window
+    ImGuizmo::SetDrawlist();
+
+    // Set the ImGuizmo context to match the ImGui window
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 windowSize = ImGui::GetWindowSize();
+    ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
+
+    // Identity matrix for grid positioning
+    static const float identityMatrix[16] = {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f};
+
+    // Draw the grid using ImGuizmo
+    ImGuizmo::BeginFrame();
+    ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(projection), identityMatrix, 10.0f); // Adjust the grid size as needed
+}
+
+void GUIManager::ProcessInput()
+{
+    // Call camera.ProcessKeyboard and camera.ProcessMouseMovement based on user input
 }
 
 void GUIManager::Render()
@@ -287,29 +328,22 @@ void GUIManager::Render()
 
 void GUIManager::RenderSources()
 {
-    ImVec4 prevButtonColor = ImGui::GetStyle().Colors[ImGuiCol_Button];
-    ImVec4 prevButtonHoveredColor = ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered];
-    ImVec4 prevButtonActiveColor = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
-
     // Set transparent colors for the button
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));        // Transparent
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0)); // Transparent
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));  // Transparent
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
 
     // Use a resizable child window
-    ImGui::BeginChild("Sources", ImVec2(ImGui::GetIO().DisplaySize.x, 100.0f), true);
+    ImGui::BeginChild("Sources", ImVec2(0, 0), true); // This allows vertical resizing
     {
         ImGui::Text("Sources");
 
-        // Variables for directory handling
         static std::string currentDirectory = std::filesystem::current_path().string();
         static std::vector<std::string> directoryStack;
         std::vector<std::filesystem::directory_entry> items;
 
-        // Slider for adjusting item size
         static float itemSize = 32.0f;
 
-        // Reading the current directory
         for (const auto &entry : std::filesystem::directory_iterator(currentDirectory))
         {
             items.push_back(entry);
@@ -319,13 +353,8 @@ void GUIManager::RenderSources()
 
         if (!directoryStack.empty())
         {
-            // Save current style colors
-
-            // Render the button
             if (ImGui::ImageButton((void *)(intptr_t)arrowUpIconTextureID, ImVec2(16.0f, 16.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
-            // Use the arrowUpIconTextureID as a button
             {
-                // Navigate up one directory level
                 currentDirectory = directoryStack.back();
                 directoryStack.pop_back();
             }
@@ -333,7 +362,7 @@ void GUIManager::RenderSources()
 
         if (ImGui::ImageButton((void *)(intptr_t)importArrowIconTextureID, ImVec2(32.0f, 32.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
         {
-            ImportAsset(); // Call the method to import an asset
+            ImportAsset();
         }
 
         if (ImGui::BeginPopupContextWindow("Sources Context Menu"))
@@ -351,16 +380,16 @@ void GUIManager::RenderSources()
 
         ImGui::Separator();
 
-        int columns = 10; // Number of columns
+        int columns = 10;
         ImGui::Columns(columns, nullptr, false);
 
         for (const auto &item : items)
         {
-            GLuint iconTextureID = attachmentIconTextureID; // Default to attachment icon
+            GLuint iconTextureID = attachmentIconTextureID;
 
             if (item.is_directory())
             {
-                iconTextureID = folderIconTextureID; // Use folder icon
+                iconTextureID = folderIconTextureID;
             }
             else
             {
@@ -379,21 +408,18 @@ void GUIManager::RenderSources()
                 }
             }
 
-            // Render the icon with the resizable size
             ImGui::Image((void *)(intptr_t)iconTextureID, ImVec2(itemSize, itemSize));
 
             if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
             {
                 if (item.is_directory())
                 {
-                    // Navigate into the directory
                     directoryStack.push_back(currentDirectory);
                     currentDirectory = item.path().string();
                 }
                 else
                 {
-                    // Handle file selection
-                    selectedAsset = item.path().string(); // This should be valid now
+                    selectedAsset = item.path().string();
                 }
             }
 

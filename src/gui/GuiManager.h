@@ -1,5 +1,6 @@
 #pragma once
 #include "../core/Window.h"
+#include "../camera/camera.h"
 // GUIManager.h
 #include <string>
 #include <vector>
@@ -11,12 +12,9 @@ public:
     ~GUIManager();
 
     bool Initialize(Window *window);
-    void NewFrame(const float *viewMatrix, const float *projectionMatrix);
+    void NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     void Render();
-    void ImportAsset();
-    void AddAssetToScene(const std::string &assetPath);
-    void CreateFolder();
-    void CreatePlayerController();
+    Camera camera;
 
 private:
     struct Asset
@@ -30,8 +28,17 @@ private:
 
     bool isPlaying;
 
-    void RenderEditorGUI(const float *viewMatrix, const float *projectionMatrix);
+    void RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     void RenderApplicationGUI();
     void RenderSources();
     void InitializeIcons();
+    void RenderOutlinePanel();
+    void ImportAsset();
+    void AddAssetToScene(const std::string &assetPath);
+    void CreateFolder();
+    void CreatePlayerController();
+    void RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
+    void RenderDetailsPanel();
+    void Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
+    void ProcessInput();
 };
