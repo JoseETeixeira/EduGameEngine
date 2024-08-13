@@ -4,6 +4,7 @@
 // GUIManager.h
 #include <string>
 #include <vector>
+#include <glm.hpp>
 
 class GUIManager
 {
@@ -13,11 +14,12 @@ public:
 
     bool Initialize(Window *window);
     void NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
-    void Render();
+    void Render(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     void ProcessInput(GLFWwindow *window, float deltaTime);
     Camera camera;
     bool firstMouse;
     float lastX, lastY;
+    void RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
 
 private:
     struct Asset

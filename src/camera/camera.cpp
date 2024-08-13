@@ -3,10 +3,11 @@
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
-#include "camera.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <gtx/string_cast.hpp>
 #include <iostream>
+
+#include "camera.h"
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
@@ -25,24 +26,42 @@ glm::mat4 Camera::GetViewMatrix() const
 
 glm::mat4 Camera::GetProjectionMatrix(float width, float height) const
 {
-    return glm::perspective(glm::radians(Zoom), width / height, 0.1f, 1000.0f); // Increase far plane to 1000.0f
+    return glm::perspective(glm::radians(Zoom), width / height, 0.1f, 1000.0f);
 }
 
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {
     float velocity = MovementSpeed * deltaTime;
     if (direction == FORWARD)
+    {
         Position += Front * velocity;
+        std::cout << "Moving Forward" << std::endl;
+    }
     if (direction == BACKWARD)
+    {
         Position -= Front * velocity;
+        std::cout << "Moving Backward" << std::endl;
+    }
     if (direction == LEFT)
+    {
         Position -= Right * velocity;
+        std::cout << "Moving Left" << std::endl;
+    }
     if (direction == RIGHT)
+    {
         Position += Right * velocity;
+        std::cout << "Moving Right" << std::endl;
+    }
     if (direction == UP)
+    {
         Position += Up * velocity;
+        std::cout << "Moving Up" << std::endl;
+    }
     if (direction == DOWN)
+    {
         Position -= Up * velocity;
+        std::cout << "Moving Down" << std::endl;
+    }
 }
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
@@ -61,18 +80,18 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
             Pitch = -89.0f;
     }
 
-    // Update camera vectors based on the new Euler angles
     updateCameraVectors();
 }
 
 void Camera::updateCameraVectors()
 {
-    glm::vec3 front;
-    front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-    front.y = sin(glm::radians(Pitch));
-    front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-    Front = glm::normalize(front);
+    // Optimized calculation and normalization
+    Front = glm::normalize(glm::vec3(
+        cos(glm::radians(Yaw)) * cos(glm::radians(Pitch)),
+        sin(glm::radians(Pitch)),
+        sin(glm::radians(Yaw)) * cos(glm::radians(Pitch))));
 
+    // Recalculate Right and Up vector
     Right = glm::normalize(glm::cross(Front, WorldUp));
     Up = glm::normalize(glm::cross(Right, Front));
 

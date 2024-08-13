@@ -35,7 +35,7 @@ public:
 private:
     void updateCameraVectors();
 
-        float Yaw;
+    float Yaw;
     float Pitch;
 
     float MovementSpeed;
@@ -47,5 +47,5 @@ private:
     const float PITCH = 0.0f;
     const float SPEED = 2.5f;
     const float SENSITIVITY = 0.1f;
-    const float ZOOM = 45.0f;
+    const float ZOOM = 1.0f;
 };

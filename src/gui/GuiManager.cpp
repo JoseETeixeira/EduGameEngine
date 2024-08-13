@@ -14,6 +14,8 @@
 #include <gtc/type_ptr.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <gtx/string_cast.hpp>
+#include <glm.hpp>
+#include <GLFW/glfw3.h>
 
 // Icons
 #include "icons/attachment_icon.h"
@@ -33,7 +35,86 @@ GLuint attachmentIconTextureID;
 GLuint arrowUpIconTextureID;
 GLuint importArrowIconTextureID;
 
-static void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
+// Function to compile shaders
+GLuint CompileShader(const char *source, GLenum shaderType)
+{
+    GLuint shader = glCreateShader(shaderType);
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    // Check for compilation errors
+    GLint success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+        char infoLog[512];
+        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+        std::cout << "ERROR::SHADER::COMPILATION_FAILED\n"
+                  << infoLog << std::endl;
+    }
+
+    return shader;
+}
+
+// Function to create a shader program
+GLuint CreateShaderProgram()
+{
+    // Vertex Shader source code
+    const char *vertexShaderSource = R"(
+    #version 330 core
+    layout (location = 0) in vec3 aPos;
+
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+
+    void main() {
+        gl_Position = projection * view * model * vec4(aPos, 1.0);
+    }
+    )";
+
+    // Fragment Shader source code
+    // Fragment Shader source code
+    const char *fragmentShaderSource = R"(
+    #version 330 core
+    out vec4 FragColor;
+
+    void main() {
+        FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Set the fragment color to bright red
+    }
+    )";
+
+    // Compile vertex shader
+    GLuint vertexShader = CompileShader(vertexShaderSource, GL_VERTEX_SHADER);
+
+    // Compile fragment shader
+    GLuint fragmentShader = CompileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
+
+    // Link shaders into a shader program
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    // Check for linking errors
+    GLint success;
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success)
+    {
+        char infoLog[512];
+        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
+        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
+                  << infoLog << std::endl;
+    }
+
+    // Clean up shaders as they are now linked into the program
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    return shaderProgram;
+}
+
+void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 {
     GUIManager *guiManager = static_cast<GUIManager *>(glfwGetWindowUserPointer(window));
     guiManager->camera.ProcessMouseScroll(static_cast<float>(yoffset));
@@ -134,11 +215,11 @@ bool GUIManager::Initialize(Window *window)
     glfwGetWindowSize(window->GetGLFWWindow(), &screenWidth, &screenHeight);
     glfwSetWindowMonitor(window->GetGLFWWindow(), nullptr, 100, 100, screenWidth, screenHeight, 0);
 
+    // Register the scroll callback
+    glfwSetScrollCallback(window->GetGLFWWindow(), ScrollCallback);
+
     // Set the user pointer to this instance of GUIManager
     glfwSetWindowUserPointer(window->GetGLFWWindow(), this);
-
-    // Set the scroll callback
-    glfwSetScrollCallback(window->GetGLFWWindow(), ScrollCallback);
 
     InitializeIcons();
     return true;
@@ -146,6 +227,13 @@ bool GUIManager::Initialize(Window *window)
 
 void GUIManager::NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
+    int screenWidth, screenHeight;
+    glfwGetFramebufferSize(glfwGetCurrentContext(), &screenWidth, &screenHeight);
+    float aspectRatio = static_cast<float>(screenWidth) / static_cast<float>(screenHeight);
+
+    // Correct the near and far plane values
+    // glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+
     // Start a new ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -153,7 +241,6 @@ void GUIManager::NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 
     // Editor GUI - Interface for the game engine
     RenderEditorGUI(viewMatrix, projectionMatrix);
-
     // Render ImGui
     ImGui::Render();
 }
@@ -268,6 +355,18 @@ void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectio
             {
                 // Ensure the grid is rendered within the ImGui window
                 Render3DGrid(viewMatrix, projectionMatrix);
+
+                // Render the test cube within the Scene tab
+                ImVec2 windowPos = ImGui::GetWindowPos();
+                ImVec2 windowSize = ImGui::GetWindowSize();
+
+                // Set the viewport to match the Scene tab size
+                glViewport(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
+                           static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
+
+                // Render the cube after setting the viewport
+                RenderTestCube(viewMatrix, projectionMatrix);
+
                 ImGui::EndTabItem();
             }
 
@@ -314,18 +413,109 @@ void GUIManager::Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
     ImVec2 windowSize = ImGui::GetWindowSize();
     ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
 
-    // Identity matrix for grid positioning
     glm::mat4 identity = glm::mat4(1.0f);
 
     ImGuizmo::BeginFrame();
-    // Ensure grid is rendered on top by adjusting draw order or disabling depth testing for the grid rendering
     glDisable(GL_DEPTH_TEST);
     ImGuizmo::DrawGrid(glm::value_ptr(viewMatrix), glm::value_ptr(projectionMatrix), glm::value_ptr(identity), 100.0f);
     glEnable(GL_DEPTH_TEST);
 }
 
+void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
+{
+
+    // Get the current window size to set the viewport
+    int screenWidth, screenHeight;
+    glfwGetFramebufferSize(glfwGetCurrentContext(), &screenWidth, &screenHeight);
+
+    // Set the viewport to cover the entire window
+    glViewport(0, 0, screenWidth, screenHeight);
+    glScissor(0, 0, screenWidth, screenHeight);
+    glEnable(GL_SCISSOR_TEST);
+
+    // Clear the color and depth buffers
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Enable depth testing
+    glEnable(GL_DEPTH_TEST);
+
+    // Disable face culling to check visibility issues
+    glDisable(GL_CULL_FACE);
+
+    // Create and use the shader program
+    GLuint shaderProgram = CreateShaderProgram();
+    glUseProgram(shaderProgram);
+
+    // Define the cube vertices
+    float vertices[] = {
+        -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f,
+        -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f,
+        -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f,
+        -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f};
+
+    // Generate and bind VAO and VBO
+    GLuint VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(0);
+
+    // Set the uniforms for the shader
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+    GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, -5.0f));
+
+    // Print the matrices to ensure they are correct
+    std::cout << "Model Matrix:\n"
+              << glm::to_string(model) << std::endl;
+    std::cout << "View Matrix:\n"
+              << glm::to_string(viewMatrix) << std::endl;
+    std::cout << "Projection Matrix:\n"
+              << glm::to_string(projectionMatrix) << std::endl;
+
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+    // Draw the cube
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    // Unbind the VAO
+    glBindVertexArray(0);
+
+    // Disable depth testing after rendering
+    glDisable(GL_DEPTH_TEST);
+
+    // Clean up
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shaderProgram);
+
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cout << "OpenGL Error: " << error << std::endl;
+    }
+}
+
 void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
 {
+    // Make sure the current context is correct
+    glfwMakeContextCurrent(window);
+
+    // Handle keyboard inputs for camera movement
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -339,9 +529,11 @@ void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         camera.ProcessKeyboard(UP, deltaTime);
 
+    // Handle right mouse button for camera movement
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
     {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide cursor
+        glfwFocusWindow(window);                                     // Ensure the window stays focused
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
 
@@ -367,9 +559,18 @@ void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
     }
 }
 
-void GUIManager::Render()
+void GUIManager::Render(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
+    // Clear the framebuffer before drawing anything
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Render the 3D content (like the red cube)
+    NewFrame(viewMatrix, projectionMatrix); // This will call RenderEditorGUI, which renders the cube
+
+    // Render the ImGui interface
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    // Swap buffers (typically done in the main loop, not here)
 }
 
 void GUIManager::RenderSources()
