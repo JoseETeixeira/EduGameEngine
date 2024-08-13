@@ -1,4 +1,3 @@
-// GUIManager.cpp
 #include "GUIManager.h"
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -13,6 +12,8 @@
 #include <iostream>
 #include "../camera/camera.h"
 #include <gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <gtx/string_cast.hpp>
 
 // Icons
 #include "icons/attachment_icon.h"
@@ -31,6 +32,12 @@ GLuint jpgFileIconTextureID;
 GLuint attachmentIconTextureID;
 GLuint arrowUpIconTextureID;
 GLuint importArrowIconTextureID;
+
+static void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
+{
+    GUIManager *guiManager = static_cast<GUIManager *>(glfwGetWindowUserPointer(window));
+    guiManager->camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
 
 GLuint LoadTextureFromSVG(const std::string &svgData)
 {
@@ -93,9 +100,13 @@ void GUIManager::InitializeIcons()
     importArrowIconTextureID = LoadTextureFromSVG(import_arrow_icon_svg);
 }
 
-GUIManager::GUIManager() : camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f)
+GUIManager::GUIManager()
+    : camera(glm::vec3(0.0f, 5.0f, 15.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f), firstMouse(true), lastX(400), lastY(300)
 {
     isPlaying = false;
+    // Adjust the camera's initial position and orientation to better view the grid
+    camera.Position = glm::vec3(0.0f, 5.0f, 15.0f); // Move the camera further back
+    camera.Front = glm::vec3(0.0f, 0.0f, -1.0f);
 }
 
 GUIManager::~GUIManager()
@@ -122,6 +133,12 @@ bool GUIManager::Initialize(Window *window)
     int screenWidth, screenHeight;
     glfwGetWindowSize(window->GetGLFWWindow(), &screenWidth, &screenHeight);
     glfwSetWindowMonitor(window->GetGLFWWindow(), nullptr, 100, 100, screenWidth, screenHeight, 0);
+
+    // Set the user pointer to this instance of GUIManager
+    glfwSetWindowUserPointer(window->GetGLFWWindow(), this);
+
+    // Set the scroll callback
+    glfwSetScrollCallback(window->GetGLFWWindow(), ScrollCallback);
 
     InitializeIcons();
     return true;
@@ -292,33 +309,62 @@ void GUIManager::RenderApplicationGUI()
 
 void GUIManager::Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
-    // Use the provided view and projection matrices
-    glm::mat4 view = viewMatrix;
-    glm::mat4 projection = projectionMatrix;
-
-    // Ensure the grid renders within the ImGui window
     ImGuizmo::SetDrawlist();
-
-    // Set the ImGuizmo context to match the ImGui window
     ImVec2 windowPos = ImGui::GetWindowPos();
     ImVec2 windowSize = ImGui::GetWindowSize();
     ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
 
     // Identity matrix for grid positioning
-    static const float identityMatrix[16] = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f};
+    glm::mat4 identity = glm::mat4(1.0f);
 
-    // Draw the grid using ImGuizmo
     ImGuizmo::BeginFrame();
-    ImGuizmo::DrawGrid(glm::value_ptr(view), glm::value_ptr(projection), identityMatrix, 10.0f); // Adjust the grid size as needed
+    // Ensure grid is rendered on top by adjusting draw order or disabling depth testing for the grid rendering
+    glDisable(GL_DEPTH_TEST);
+    ImGuizmo::DrawGrid(glm::value_ptr(viewMatrix), glm::value_ptr(projectionMatrix), glm::value_ptr(identity), 100.0f);
+    glEnable(GL_DEPTH_TEST);
 }
 
-void GUIManager::ProcessInput()
+void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
 {
-    // Call camera.ProcessKeyboard and camera.ProcessMouseMovement based on user input
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.ProcessKeyboard(FORWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.ProcessKeyboard(BACKWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.ProcessKeyboard(LEFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+        camera.ProcessKeyboard(DOWN, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        camera.ProcessKeyboard(UP, deltaTime);
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+    {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide cursor
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+
+        if (firstMouse)
+        {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
+
+        float xoffset = xpos - lastX;
+        float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+        lastX = xpos;
+        lastY = ypos;
+
+        camera.ProcessMouseMovement(xoffset, yoffset);
+    }
+    else
+    {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); // Show cursor
+        firstMouse = true;
+    }
 }
 
 void GUIManager::Render()

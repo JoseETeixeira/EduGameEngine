@@ -14,7 +14,10 @@ public:
     bool Initialize(Window *window);
     void NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     void Render();
+    void ProcessInput(GLFWwindow *window, float deltaTime);
     Camera camera;
+    bool firstMouse;
+    float lastX, lastY;
 
 private:
     struct Asset
@@ -40,5 +43,4 @@ private:
     void RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     void RenderDetailsPanel();
     void Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
-    void ProcessInput();
 };

@@ -18,6 +18,8 @@ bool Renderer::Initialize(Window *window)
     int width, height;
     glfwGetFramebufferSize(window->GetGLFWWindow(), &width, &height);
     glViewport(0, 0, width, height);
+    glEnable(GL_DEPTH_TEST); // Ensure depth testing is enabled to handle grid and camera correctly
+
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     glEnable(GL_DEPTH_TEST);

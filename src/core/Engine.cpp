@@ -41,11 +41,21 @@ bool Engine::Initialize()
 
 void Engine::Run()
 {
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
+
     while (!window->ShouldClose())
     {
+        // Calculate delta time
+        float currentFrame = static_cast<float>(glfwGetTime());
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        // Process input for camera movement
+        guiManager->ProcessInput(window->GetGLFWWindow(), deltaTime);
+
         window->PollEvents();
 
-        // Retrieve the current width and height of the window
         int width, height;
         glfwGetFramebufferSize(window->GetGLFWWindow(), &width, &height);
 
@@ -53,7 +63,6 @@ void Engine::Run()
         glm::mat4 viewMatrix = guiManager->camera.GetViewMatrix();
         glm::mat4 projectionMatrix = guiManager->camera.GetProjectionMatrix(static_cast<float>(width), static_cast<float>(height));
 
-        // Pass the view and projection matrices to the GUIManager's NewFrame function
         guiManager->NewFrame(viewMatrix, projectionMatrix);
 
         // Scene update and rendering
