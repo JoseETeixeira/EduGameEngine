@@ -292,7 +292,34 @@ void GUIManager::RenderSources()
             items.push_back(entry);
         }
 
-        int columns = 5; // Number of columns
+        ImGui::Columns(1);
+
+        if (!directoryStack.empty() && ImGui::Button("Up"))
+        {
+            // Navigate up one directory level
+            currentDirectory = directoryStack.back();
+            directoryStack.pop_back();
+        }
+
+        if (ImGui::Button("Import Asset"))
+        {
+            ImportAsset(); // Call the method to import an asset
+        }
+
+        if (ImGui::BeginPopupContextWindow("Sources Context Menu"))
+        {
+            if (ImGui::MenuItem("Create Folder"))
+            {
+                CreateFolder();
+            }
+            if (ImGui::MenuItem("New Player Controller"))
+            {
+                CreatePlayerController();
+            }
+            ImGui::EndPopup();
+        }
+        ImGui::Separator();
+        int columns = 10; // Number of columns
         ImGui::Columns(columns, nullptr, false);
 
         for (const auto &item : items)
@@ -340,34 +367,6 @@ void GUIManager::RenderSources()
 
             ImGui::TextWrapped(item.path().filename().string().c_str());
             ImGui::NextColumn();
-        }
-
-        ImGui::Columns(1);
-        ImGui::Separator();
-
-        if (!directoryStack.empty() && ImGui::Button("Up"))
-        {
-            // Navigate up one directory level
-            currentDirectory = directoryStack.back();
-            directoryStack.pop_back();
-        }
-
-        if (ImGui::Button("Import Asset"))
-        {
-            ImportAsset(); // Call the method to import an asset
-        }
-
-        if (ImGui::BeginPopupContextWindow("Sources Context Menu"))
-        {
-            if (ImGui::MenuItem("Create Folder"))
-            {
-                CreateFolder();
-            }
-            if (ImGui::MenuItem("New Player Controller"))
-            {
-                CreatePlayerController();
-            }
-            ImGui::EndPopup();
         }
     }
     ImGui::End();
