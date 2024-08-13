@@ -20,6 +20,7 @@
 #include "icons/png_icon.h"
 #include "icons/text_icon.h"
 #include "icons/arrow_up.h"
+#include "icons/import_arrow.h"
 
 GLuint folderIconTextureID;
 GLuint textFileIconTextureID;
@@ -27,6 +28,7 @@ GLuint pngFileIconTextureID;
 GLuint jpgFileIconTextureID;
 GLuint attachmentIconTextureID;
 GLuint arrowUpIconTextureID;
+GLuint importArrowIconTextureID;
 
 GLuint LoadTextureFromSVG(const std::string &svgData)
 {
@@ -86,6 +88,7 @@ void GUIManager::InitializeIcons()
     jpgFileIconTextureID = LoadTextureFromSVG(jpg_icon_svg);
     attachmentIconTextureID = LoadTextureFromSVG(attachment_icon_svg);
     arrowUpIconTextureID = LoadTextureFromSVG(arrow_up_icon_svg);
+    importArrowIconTextureID = LoadTextureFromSVG(import_arrow_icon_svg);
 }
 
 GUIManager::GUIManager() : isPlaying(false) {}
@@ -328,7 +331,7 @@ void GUIManager::RenderSources()
             }
         }
 
-        if (ImGui::Button("Import Asset"))
+        if (ImGui::ImageButton((void *)(intptr_t)importArrowIconTextureID, ImVec2(32.0f, 32.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
         {
             ImportAsset(); // Call the method to import an asset
         }
