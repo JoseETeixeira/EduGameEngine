@@ -19,12 +19,14 @@
 #include "icons/mp4_icon.h"
 #include "icons/png_icon.h"
 #include "icons/text_icon.h"
+#include "icons/arrow_up.h"
 
 GLuint folderIconTextureID;
 GLuint textFileIconTextureID;
 GLuint pngFileIconTextureID;
 GLuint jpgFileIconTextureID;
 GLuint attachmentIconTextureID;
+GLuint arrowUpIconTextureID;
 
 GLuint LoadTextureFromSVG(const std::string &svgData)
 {
@@ -83,6 +85,7 @@ void GUIManager::InitializeIcons()
     pngFileIconTextureID = LoadTextureFromSVG(png_icon_svg);
     jpgFileIconTextureID = LoadTextureFromSVG(jpg_icon_svg);
     attachmentIconTextureID = LoadTextureFromSVG(attachment_icon_svg);
+    arrowUpIconTextureID = LoadTextureFromSVG(arrow_up_icon_svg);
 }
 
 GUIManager::GUIManager() : isPlaying(false) {}
@@ -103,13 +106,14 @@ bool GUIManager::Initialize(Window *window)
 
     ImGui::StyleColorsDark();
 
+    // Set the window creation flags (Make sure the window is resizable and has decorations)
     ImGui_ImplGlfw_InitForOpenGL(window->GetGLFWWindow(), true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    // Set the window to take up the whole screen in windowed mode
+    // Remove the fullscreen setting to ensure buttons are visible
     int screenWidth, screenHeight;
     glfwGetWindowSize(window->GetGLFWWindow(), &screenWidth, &screenHeight);
-    glfwSetWindowMonitor(window->GetGLFWWindow(), nullptr, 0, 0, screenWidth, screenHeight, 0);
+    glfwSetWindowMonitor(window->GetGLFWWindow(), nullptr, 100, 100, screenWidth, screenHeight, 0);
 
     InitializeIcons();
     return true;
@@ -168,7 +172,7 @@ void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectio
     }
 
     // 2. Create the Play and Stop buttons below the menu bar
-    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
     ImGui::SetWindowPos(ImVec2(0, 19));                             // Position it right below the menu bar
     ImGui::SetWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 40)); // Full width, height for buttons
 
@@ -186,66 +190,71 @@ void GUIManager::RenderEditorGUI(const float *viewMatrix, const float *projectio
 
     ImGui::End();
 
-    // 3. Divide the main area into three sections: Outline, Main Editor, and Details
-    ImGui::SetNextWindowPos(ImVec2(0, 60)); // Start below the buttons
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 160));
+    // 3. Divide the main area into three sections: Outline, Main Editor, and Details using columns
+    ImGui::SetNextWindowPos(ImVec2(0, 60));                                                            // Start below the buttons
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 60)); // Use full height below the controls
     ImGui::Begin("Workspace", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
     {
-        ImVec2 ContentRegionAvail = ImGui::GetContentRegionAvail();
-        float columnWidth = ContentRegionAvail.x * 0.25f;
-
-        // Outline section
-        ImGui::BeginChild("Outline", ImVec2(columnWidth, ContentRegionAvail.y), true);
+        ImGui::BeginChild("WorkspaceContent", ImVec2(0, ImGui::GetContentRegionAvail().y - 100), false);
         {
-            ImGui::Text("Outline");
-            // Add nodes, etc.
-            if (ImGui::TreeNode("Node1"))
+            ImGui::Columns(3, nullptr, true); // 3 columns with resizable splitters
+
+            // Outline section
+            ImGui::BeginChild("Outline", ImVec2(0, 0), true);
             {
-                ImGui::Text("Node1 Child");
-                ImGui::TreePop();
+                ImGui::Text("Outline");
+                // Add nodes, etc.
+                if (ImGui::TreeNode("Node1"))
+                {
+                    ImGui::Text("Node1 Child");
+                    ImGui::TreePop();
+                }
+                if (ImGui::TreeNode("Node2"))
+                {
+                    ImGui::Text("Node2 Child");
+                    ImGui::TreePop();
+                }
+                // You can add options to add/remove nodes
             }
-            if (ImGui::TreeNode("Node2"))
+            ImGui::EndChild();
+
+            ImGui::NextColumn();
+
+            // Main Editor section
+            ImGui::BeginChild("Main Editor", ImVec2(0, 0), true);
             {
-                ImGui::Text("Node2 Child");
-                ImGui::TreePop();
+                if (isPlaying)
+                {
+                    RenderApplicationGUI(); // Render the Application GUI inside the Main Editor
+                }
+                else
+                {
+                    ImGui::Text("Main Editor");
+                    // Insert game editor content here (e.g., rendering game scene, handling input, etc.)
+                }
             }
-            // You can add options to add/remove nodes
+            ImGui::EndChild();
+
+            ImGui::NextColumn();
+
+            // Details section
+            ImGui::BeginChild("Details", ImVec2(0, 0), true);
+            {
+                ImGui::Text("Details");
+                // Show details of selected nodes (e.g., position, components, etc.)
+                ImGui::Text("Transform:");
+                // Add more component fields as necessary
+            }
+            ImGui::EndChild();
+
+            ImGui::Columns(1); // End columns
         }
         ImGui::EndChild();
 
-        ImGui::SameLine();
-
-        // Main Editor section
-        ImGui::BeginChild("Main Editor", ImVec2(ContentRegionAvail.x * 0.5f, ContentRegionAvail.y), true);
-        {
-            if (isPlaying)
-            {
-                RenderApplicationGUI(); // Render the Application GUI inside the Main Editor
-            }
-            else
-            {
-                ImGui::Text("Main Editor");
-                // Insert game editor content here (e.g., rendering game scene, handling input, etc.)
-            }
-        }
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        // Details section
-        ImGui::BeginChild("Details", ImVec2(ContentRegionAvail.x * 0.25f, ContentRegionAvail.y), true);
-        {
-            ImGui::Text("Details");
-            // Show details of selected nodes (e.g., position, components, etc.)
-            ImGui::Text("Transform:");
-            // Add more component fields as necessary
-        }
-        ImGui::EndChild();
+        // Render Sources as a resizable child of Workspace
+        RenderSources();
     }
     ImGui::End();
-
-    // Sources section
-    RenderSources();
 
     // Example of manipulating a matrix using ImGuizmo
     ImGuizmo::BeginFrame();
@@ -275,9 +284,17 @@ void GUIManager::Render()
 
 void GUIManager::RenderSources()
 {
-    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 100)); // Position at the bottom
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 100));    // Take up the full width
-    ImGui::Begin("Sources", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+    ImVec4 prevButtonColor = ImGui::GetStyle().Colors[ImGuiCol_Button];
+    ImVec4 prevButtonHoveredColor = ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered];
+    ImVec4 prevButtonActiveColor = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
+
+    // Set transparent colors for the button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));        // Transparent
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0)); // Transparent
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));  // Transparent
+
+    // Use a resizable child window
+    ImGui::BeginChild("Sources", ImVec2(ImGui::GetIO().DisplaySize.x, 100.0f), true);
     {
         ImGui::Text("Sources");
 
@@ -285,6 +302,9 @@ void GUIManager::RenderSources()
         static std::string currentDirectory = std::filesystem::current_path().string();
         static std::vector<std::string> directoryStack;
         std::vector<std::filesystem::directory_entry> items;
+
+        // Slider for adjusting item size
+        static float itemSize = 32.0f;
 
         // Reading the current directory
         for (const auto &entry : std::filesystem::directory_iterator(currentDirectory))
@@ -294,11 +314,18 @@ void GUIManager::RenderSources()
 
         ImGui::Columns(1);
 
-        if (!directoryStack.empty() && ImGui::Button("Up"))
+        if (!directoryStack.empty())
         {
-            // Navigate up one directory level
-            currentDirectory = directoryStack.back();
-            directoryStack.pop_back();
+            // Save current style colors
+
+            // Render the button
+            if (ImGui::ImageButton((void *)(intptr_t)arrowUpIconTextureID, ImVec2(16.0f, 16.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
+            // Use the arrowUpIconTextureID as a button
+            {
+                // Navigate up one directory level
+                currentDirectory = directoryStack.back();
+                directoryStack.pop_back();
+            }
         }
 
         if (ImGui::Button("Import Asset"))
@@ -318,7 +345,9 @@ void GUIManager::RenderSources()
             }
             ImGui::EndPopup();
         }
+
         ImGui::Separator();
+
         int columns = 10; // Number of columns
         ImGui::Columns(columns, nullptr, false);
 
@@ -347,8 +376,8 @@ void GUIManager::RenderSources()
                 }
             }
 
-            // Render the icon
-            ImGui::Image((void *)(intptr_t)iconTextureID, ImVec2(50, 50));
+            // Render the icon with the resizable size
+            ImGui::Image((void *)(intptr_t)iconTextureID, ImVec2(itemSize, itemSize));
 
             if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
             {
@@ -369,7 +398,8 @@ void GUIManager::RenderSources()
             ImGui::NextColumn();
         }
     }
-    ImGui::End();
+    ImGui::EndChild();
+    ImGui::PopStyleColor(3);
 }
 
 void GUIManager::ImportAsset()
