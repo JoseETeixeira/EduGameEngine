@@ -10,7 +10,6 @@
 #include "camera.h"
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
-    : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
 {
     Position = position;
     WorldUp = up;
@@ -26,42 +25,47 @@ glm::mat4 Camera::GetViewMatrix() const
 
 glm::mat4 Camera::GetProjectionMatrix(float width, float height) const
 {
-    return glm::perspective(glm::radians(Zoom), width / height, 0.1f, 1000.0f);
+    return glm::perspective(glm::radians(Zoom), (float)width / (float)height, 0.1f, 100.0f);
 }
 
 void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {
+    std::cout << "Initial Camera Position: " << glm::to_string(Position) << std::endl;
     float velocity = MovementSpeed * deltaTime;
+    std::cout << "Velocity: " << velocity << std::endl;
+
     if (direction == FORWARD)
     {
+        std::cout << "Moving FORWARD" << std::endl;
         Position += Front * velocity;
-        std::cout << "Moving Forward" << std::endl;
     }
     if (direction == BACKWARD)
     {
+        std::cout << "Moving BACKWARD" << std::endl;
         Position -= Front * velocity;
-        std::cout << "Moving Backward" << std::endl;
     }
     if (direction == LEFT)
     {
+        std::cout << "Moving LEFT" << std::endl;
         Position -= Right * velocity;
-        std::cout << "Moving Left" << std::endl;
     }
     if (direction == RIGHT)
     {
+        std::cout << "Moving RIGHT" << std::endl;
         Position += Right * velocity;
-        std::cout << "Moving Right" << std::endl;
     }
     if (direction == UP)
     {
+        std::cout << "Moving UP" << std::endl;
         Position += Up * velocity;
-        std::cout << "Moving Up" << std::endl;
     }
     if (direction == DOWN)
     {
+        std::cout << "Moving DOWN" << std::endl;
         Position -= Up * velocity;
-        std::cout << "Moving Down" << std::endl;
     }
+
+    std::cout << "Updated Camera Position: " << glm::to_string(Position) << std::endl;
 }
 
 void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
@@ -81,24 +85,23 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
     }
 
     updateCameraVectors();
+
+    std::cout << "Yaw: " << Yaw << ", Pitch: " << Pitch << std::endl;
+    std::cout << "Camera Front: " << glm::to_string(Front) << std::endl;
 }
 
 void Camera::updateCameraVectors()
 {
-    // Optimized calculation and normalization
-    Front = glm::normalize(glm::vec3(
-        cos(glm::radians(Yaw)) * cos(glm::radians(Pitch)),
-        sin(glm::radians(Pitch)),
-        sin(glm::radians(Yaw)) * cos(glm::radians(Pitch))));
+    // Calculate the new Front vector
+    glm::vec3 front;
+    front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+    front.y = sin(glm::radians(Pitch));
+    front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+    Front = glm::normalize(front);
 
-    // Recalculate Right and Up vector
-    Right = glm::normalize(glm::cross(Front, WorldUp));
+    // Also re-calculate the Right and Up vector
+    Right = glm::normalize(glm::cross(Front, WorldUp)); // Normalize the vectors
     Up = glm::normalize(glm::cross(Right, Front));
-
-    std::cout << "Camera Position: " << glm::to_string(Position) << std::endl;
-    std::cout << "Camera Front: " << glm::to_string(Front) << std::endl;
-    std::cout << "Camera Up: " << glm::to_string(Up) << std::endl;
-    std::cout << "Camera Right: " << glm::to_string(Right) << std::endl;
 }
 
 void Camera::ProcessMouseScroll(float yoffset)

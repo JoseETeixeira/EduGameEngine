@@ -27,7 +27,7 @@ public:
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
     void ProcessMouseScroll(float yoffset);
     glm::vec3 Position;
-    glm::vec3 Front;
+    glm::vec3 Front = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 Up;
     glm::vec3 Right;
     glm::vec3 WorldUp;
@@ -38,14 +38,14 @@ private:
     float Yaw;
     float Pitch;
 
-    float MovementSpeed;
-    float MouseSensitivity;
-    float Zoom;
+    float MovementSpeed = 2.5f;
+    float MouseSensitivity = 0.1f;
+    float Zoom = 45.0f;
 
     // Default camera values
     const float YAW = -90.0f;
     const float PITCH = 0.0f;
     const float SPEED = 2.5f;
     const float SENSITIVITY = 0.1f;
-    const float ZOOM = 1.0f;
+    const float ZOOM = 45.0f;
 };

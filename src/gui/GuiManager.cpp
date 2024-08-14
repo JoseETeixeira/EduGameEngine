@@ -477,14 +477,6 @@ void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix
     model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
     model = glm::translate(model, glm::vec3(0.0f, 0.0f, -5.0f));
 
-    // Print the matrices to ensure they are correct
-    std::cout << "Model Matrix:\n"
-              << glm::to_string(model) << std::endl;
-    std::cout << "View Matrix:\n"
-              << glm::to_string(viewMatrix) << std::endl;
-    std::cout << "Projection Matrix:\n"
-              << glm::to_string(projectionMatrix) << std::endl;
-
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
@@ -512,10 +504,6 @@ void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix
 
 void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
 {
-    // Make sure the current context is correct
-    glfwMakeContextCurrent(window);
-
-    // Handle keyboard inputs for camera movement
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -529,11 +517,9 @@ void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         camera.ProcessKeyboard(UP, deltaTime);
 
-    // Handle right mouse button for camera movement
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Hide cursor
-        glfwFocusWindow(window);                                     // Ensure the window stays focused
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
 
@@ -545,7 +531,7 @@ void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
         }
 
         float xoffset = xpos - lastX;
-        float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+        float yoffset = lastY - ypos;
 
         lastX = xpos;
         lastY = ypos;
@@ -554,7 +540,7 @@ void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
     }
     else
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); // Show cursor
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         firstMouse = true;
     }
 }

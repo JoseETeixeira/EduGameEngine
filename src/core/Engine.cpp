@@ -4,6 +4,7 @@
 #include "../gui/GuiManager.h" // Include GUIManager definition if necessary
 #include "../scene/Scene.h"    // Include Scene definition if necessary
 #include <GLFW/glfw3.h>        // Ensure this is included to define GLFWwindow
+#include <iostream>
 
 Engine::Engine()
     : window(nullptr), renderer(nullptr), guiManager(nullptr), scene(nullptr) {}
@@ -50,6 +51,8 @@ void Engine::Run()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        std::cout << "DeltaTime: " << deltaTime << std::endl;
+
         guiManager->ProcessInput(window->GetGLFWWindow(), deltaTime);
 
         window->PollEvents();
@@ -61,10 +64,8 @@ void Engine::Run()
         glm::mat4 projectionMatrix = guiManager->camera.GetProjectionMatrix(static_cast<float>(width), static_cast<float>(height));
 
         guiManager->NewFrame(viewMatrix, projectionMatrix);
-
         scene->Update();
         renderer->Render(scene);
-
         guiManager->Render(viewMatrix, projectionMatrix);
 
         window->SwapBuffers();
