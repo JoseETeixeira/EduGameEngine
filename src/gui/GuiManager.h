@@ -1,10 +1,13 @@
 #pragma once
+#include "../core/Engine.h"
 #include "../core/Window.h"
 #include "../camera/camera.h"
 // GUIManager.h
 #include <string>
 #include <vector>
 #include <glm.hpp>
+
+class Engine;
 
 class GUIManager
 {
@@ -20,6 +23,7 @@ public:
     bool firstMouse;
     float lastX, lastY;
     void RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
+    Engine *engine;
 
 private:
     struct Asset

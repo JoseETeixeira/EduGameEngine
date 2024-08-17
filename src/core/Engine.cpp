@@ -4,10 +4,17 @@
 #include "../gui/GuiManager.h" // Include GUIManager definition if necessary
 #include "../scene/Scene.h"    // Include Scene definition if necessary
 #include <GLFW/glfw3.h>        // Ensure this is included to define GLFWwindow
+#include "../ecs/MovementSystem.h"
 #include <iostream>
 
 Engine::Engine()
-    : window(nullptr), renderer(nullptr), guiManager(nullptr), scene(nullptr) {}
+    : window(nullptr), renderer(nullptr), guiManager(nullptr), scene(nullptr), isPlaying(false)
+{
+
+    // Add the MovementSystem
+    auto movementSystem = std::make_shared<MovementSystem>();
+    systemManager.AddSystem(movementSystem);
+}
 
 Engine::~Engine()
 {
@@ -33,6 +40,7 @@ bool Engine::Initialize()
     {
         return false;
     }
+    guiManager->engine = this;
 
     scene = new Scene();
     // Initialize scene, load resources, etc.
@@ -51,8 +59,6 @@ void Engine::Run()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        std::cout << "DeltaTime: " << deltaTime << std::endl;
-
         guiManager->ProcessInput(window->GetGLFWWindow(), deltaTime);
 
         window->PollEvents();
@@ -63,6 +69,11 @@ void Engine::Run()
         glm::mat4 viewMatrix = guiManager->camera.GetViewMatrix();
         glm::mat4 projectionMatrix = guiManager->camera.GetProjectionMatrix(static_cast<float>(width), static_cast<float>(height));
 
+        if (isPlaying)
+        {
+            systemManager.TickAllSystems(registry, deltaTime);
+        }
+
         guiManager->NewFrame(viewMatrix, projectionMatrix);
         scene->Update();
         renderer->Render(scene);
@@ -70,6 +81,11 @@ void Engine::Run()
 
         window->SwapBuffers();
     }
+}
+
+void Engine::SetPlaying(bool play)
+{
+    isPlaying = play;
 }
 
 void Engine::Shutdown()

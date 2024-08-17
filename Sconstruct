@@ -30,7 +30,8 @@ env.Append(CPPPATH=[
     'include/imgui/backends',      # Path to ImGui backends directory
     'include/imguizmo',            # Path to ImGuizmo include directory
     'include/nfd/src/include',     # Path to Native File Dialog include directory
-    'include/nanosvg/src',          # Path to NanoSVG include directory
+    'include/nanosvg/src',         # Path to NanoSVG include directory
+    'include/entt',                # Path to EnTT include directory
 ])
 
 # Library paths for GLFW, GLEW, and OpenGL

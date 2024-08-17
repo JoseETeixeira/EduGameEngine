@@ -16,6 +16,7 @@
 #include <gtx/string_cast.hpp>
 #include <glm.hpp>
 #include <GLFW/glfw3.h>
+#include "../ecs/MovementSystem.h"
 
 // Icons
 #include "icons/attachment_icon.h"
@@ -290,12 +291,12 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
 
     if (ImGui::Button("Play"))
     {
-        isPlaying = true;
+        engine->SetPlaying(true); // Call SetPlaying with true
     }
     ImGui::SameLine();
     if (ImGui::Button("Stop"))
     {
-        isPlaying = false;
+        engine->SetPlaying(false);
     }
 
     ImGui::End();
@@ -423,12 +424,22 @@ void GUIManager::Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 
 void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
+    static auto cubeEntity = engine->registry.create();
+    static bool initialized = false;
 
-    // Get the current window size to set the viewport
-    int screenWidth, screenHeight;
-    glfwGetFramebufferSize(glfwGetCurrentContext(), &screenWidth, &screenHeight);
+    if (!initialized)
+    {
+        engine->registry.emplace<PositionComponent>(cubeEntity, glm::vec3(0.0f, 0.0f, 0.0f));
+        engine->registry.emplace<VelocityComponent>(cubeEntity, glm::vec3(1.0f, 1.0f, 0.0f));
+        initialized = true;
+    }
+
+    // Retrieve the position from the PositionComponent
+    auto &position = engine->registry.get<PositionComponent>(cubeEntity);
 
     // Set the viewport to cover the entire window
+    int screenWidth, screenHeight;
+    glfwGetFramebufferSize(glfwGetCurrentContext(), &screenWidth, &screenHeight);
     glViewport(0, 0, screenWidth, screenHeight);
     glScissor(0, 0, screenWidth, screenHeight);
     glEnable(GL_SCISSOR_TEST);
@@ -473,9 +484,10 @@ void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
     GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
 
+    // Update the model matrix with the current position
     glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, position.position);
     model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, -5.0f));
 
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
