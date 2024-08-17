@@ -36,7 +36,10 @@ private:
     std::string selectedAsset;
 
     bool isPlaying;
-
+    GLint viewport[4];
+    GLint scissorBox[4];
+    int screenWidth;
+    int screenHeight;
     void RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     void RenderApplicationGUI();
     void RenderSources();

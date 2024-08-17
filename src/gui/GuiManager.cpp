@@ -232,6 +232,11 @@ void GUIManager::NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
     glfwGetFramebufferSize(glfwGetCurrentContext(), &screenWidth, &screenHeight);
     float aspectRatio = static_cast<float>(screenWidth) / static_cast<float>(screenHeight);
 
+    // Set the viewport to cover the entire window
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
+
     // Correct the near and far plane values
     // glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
 
@@ -242,6 +247,8 @@ void GUIManager::NewFrame(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 
     // Editor GUI - Interface for the game engine
     RenderEditorGUI(viewMatrix, projectionMatrix);
+    glViewport(viewport[0], viewport[1], screenWidth, screenHeight);
+    glScissor(scissorBox[0], scissorBox[1], screenWidth, screenHeight);
     // Render ImGui
     ImGui::Render();
 }
@@ -360,14 +367,6 @@ void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectio
                 // Ensure the grid is rendered within the ImGui window
                 Render3DGrid(viewMatrix, projectionMatrix);
 
-                // Render the test cube within the Scene tab
-                ImVec2 windowPos = ImGui::GetWindowPos();
-                ImVec2 windowSize = ImGui::GetWindowSize();
-
-                // Set the viewport to match the Scene tab size
-                glViewport(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
-                           static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
-
                 // Render the cube after setting the viewport
                 RenderTestCube(viewMatrix, projectionMatrix);
 
@@ -440,11 +439,17 @@ void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix
     // Retrieve the position from the PositionComponent
     auto &position = engine->registry.get<PositionComponent>(cubeEntity);
 
-    // Set the viewport to cover the entire window
-    int screenWidth, screenHeight;
-    glfwGetFramebufferSize(glfwGetCurrentContext(), &screenWidth, &screenHeight);
-    glViewport(0, 0, screenWidth, screenHeight);
-    glScissor(0, 0, screenWidth, screenHeight);
+    // Render the test cube within the Scene tab
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 windowSize = ImGui::GetWindowSize();
+    // Set the viewport to the current ImGui window size and position
+    glViewport(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
+               static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
+
+    // Set the scissor box to match the current ImGui window
+    glScissor(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
+              static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
+
     glEnable(GL_SCISSOR_TEST);
 
     // Clear the color and depth buffers
@@ -452,9 +457,6 @@ void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
-
-    // Disable face culling to check visibility issues
-    glDisable(GL_CULL_FACE);
 
     // Create and use the shader program
     GLuint shaderProgram = CreateShaderProgram();
