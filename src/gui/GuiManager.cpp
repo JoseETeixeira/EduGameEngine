@@ -304,6 +304,8 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
     // 3. Main area with resizable panels
     ImGui::SetNextWindowPos(ImVec2(0, 60));                                                            // Start below the buttons
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 60)); // Use full height below the controls
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));                                      // RGBA with A=0 for transparency
+
     ImGui::Begin("Workspace", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
     {
         // Workspace content, takes all the space except for the space used by the Sources panel
@@ -325,6 +327,7 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
         RenderSources();
     }
     ImGui::End();
+    ImGui::PopStyleColor();
 }
 
 void GUIManager::RenderOutlinePanel()
