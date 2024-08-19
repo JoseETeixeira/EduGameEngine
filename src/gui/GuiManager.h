@@ -56,4 +56,5 @@ private:
     void CreateNewProject();
     void SaveProject();
     void LoadScene(const std::string &scenePath);
+    bool contentDrawerOpen;
 };

@@ -190,6 +190,7 @@ GUIManager::GUIManager()
     // Adjust the camera's initial position and orientation to better view the grid
     camera.Position = glm::vec3(0.0f, 5.0f, 15.0f); // Move the camera further back
     camera.Front = glm::vec3(0.0f, 0.0f, -1.0f);
+    contentDrawerOpen = false;
 }
 
 GUIManager::~GUIManager()
@@ -262,32 +263,36 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
         if (ImGui::BeginMenu("File"))
         {
             if (ImGui::MenuItem("New Project"))
-            { /* Handle new action */
-            CreateNewProject();
+            {
+                CreateNewProject();
             }
             if (ImGui::MenuItem("Open Project"))
-            { /* Handle open action */
-            OpenProject();
+            {
+                OpenProject();
             }
             if (ImGui::MenuItem("Save Project"))
-            { /* Handle save action */
+            {
+                SaveProject();
             }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit"))
         {
             if (ImGui::MenuItem("Undo"))
-            { /* Handle undo action */
+            {
+                // Handle undo action
             }
             if (ImGui::MenuItem("Redo"))
-            { /* Handle redo action */
+            {
+                // Handle redo action
             }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Window"))
         {
             if (ImGui::MenuItem("Settings"))
-            { /* Handle settings action */
+            {
+                // Handle settings action
             }
             ImGui::EndMenu();
         }
@@ -312,14 +317,16 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
     ImGui::End();
 
     // 3. Main area with resizable panels
-    ImGui::SetNextWindowPos(ImVec2(0, 60));                                                            // Start below the buttons
-    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 60)); // Use full height below the controls
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));                                      // RGBA with A=0 for transparency
+    float remainingHeight = ImGui::GetIO().DisplaySize.y - 100; // Deducting height for controls and content drawer button
+
+    ImGui::SetNextWindowPos(ImVec2(0, 60));                                          // Start below the buttons
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, remainingHeight)); // Use full height below the controls
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));                    // RGBA with A=0 for transparency
 
     ImGui::Begin("Workspace", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
     {
         // Workspace content, takes all the space except for the space used by the Sources panel
-        ImGui::BeginChild("WorkspaceContent", ImVec2(0, ImGui::GetContentRegionAvail().y - 100), true); // Leaves space for Sources
+        ImGui::BeginChild("WorkspaceContent", ImVec2(0, remainingHeight - 40), true); // Leaves space for the Content Drawer button
         {
             ImGui::Columns(3, nullptr, true); // 3 columns with resizable splitters
 
@@ -333,8 +340,32 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
         }
         ImGui::EndChild();
 
-        // Render Sources as a resizable child of Workspace
-        RenderSources();
+        // Content Drawer Button
+        ImGui::SetCursorPosY(remainingHeight - 30); // Adjust the position to the bottom
+        if (ImGui::Button("Content Drawer", ImVec2(ImGui::GetIO().DisplaySize.x, 30)))
+        {
+            contentDrawerOpen = !contentDrawerOpen; // Toggle the drawer open state
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+
+    // 4. Animate and render the Sources panel
+    static float animOffset = 0.0f;
+    static const float animSpeed = 200.0f;                                                 // Pixels per second
+    float targetPosY = ImGui::GetIO().DisplaySize.y - (contentDrawerOpen ? 300.0f : 0.0f); // Target Y position based on the drawer state
+
+    // Smoothly animate towards the target position
+    animOffset += (targetPosY - animOffset) * animSpeed * ImGui::GetIO().DeltaTime;
+    ImVec2 drawerPos = ImVec2(0, animOffset);
+
+    ImGui::SetNextWindowPos(drawerPos);
+    ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 300));       // Fixed height for the drawer
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 0.95f)); // Dark semi-transparent background for the drawer
+
+    ImGui::Begin("SourcesDrawer", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse);
+    {
+        RenderSources(); // Render the Sources content here
     }
     ImGui::End();
     ImGui::PopStyleColor();
@@ -689,101 +720,97 @@ void GUIManager::RenderSources()
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
 
-    // Use a resizable child window
-    ImGui::BeginChild("Sources", ImVec2(0, 0), true); // This allows vertical resizing
+    ImGui::Text("Sources");
+
+    static std::string currentDirectory = std::filesystem::current_path().string();
+    static std::vector<std::string> directoryStack;
+    std::vector<std::filesystem::directory_entry> items;
+
+    static float itemSize = 32.0f;
+
+    for (const auto &entry : std::filesystem::directory_iterator(currentDirectory))
     {
-        ImGui::Text("Sources");
+        items.push_back(entry);
+    }
 
-        static std::string currentDirectory = std::filesystem::current_path().string();
-        static std::vector<std::string> directoryStack;
-        std::vector<std::filesystem::directory_entry> items;
+    ImGui::Columns(1);
 
-        static float itemSize = 32.0f;
-
-        for (const auto &entry : std::filesystem::directory_iterator(currentDirectory))
+    if (!directoryStack.empty())
+    {
+        if (ImGui::ImageButton((void *)(intptr_t)arrowUpIconTextureID, ImVec2(16.0f, 16.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
         {
-            items.push_back(entry);
+            currentDirectory = directoryStack.back();
+            directoryStack.pop_back();
         }
+    }
 
-        ImGui::Columns(1);
+    if (ImGui::ImageButton((void *)(intptr_t)importArrowIconTextureID, ImVec2(32.0f, 32.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
+    {
+        ImportAsset();
+    }
 
-        if (!directoryStack.empty())
+    if (ImGui::BeginPopupContextWindow("Sources Context Menu"))
+    {
+        if (ImGui::MenuItem("Create Folder"))
         {
-            if (ImGui::ImageButton((void *)(intptr_t)arrowUpIconTextureID, ImVec2(16.0f, 16.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
+            CreateFolder();
+        }
+        if (ImGui::MenuItem("New Player Controller"))
+        {
+            CreatePlayerController();
+        }
+        ImGui::EndPopup();
+    }
+
+    ImGui::Separator();
+
+    int columns = 10;
+    ImGui::Columns(columns, nullptr, false);
+
+    for (const auto &item : items)
+    {
+        GLuint iconTextureID = attachmentIconTextureID;
+
+        if (item.is_directory())
+        {
+            iconTextureID = folderIconTextureID;
+        }
+        else
+        {
+            std::string extension = item.path().extension().string();
+            if (extension == ".txt")
             {
-                currentDirectory = directoryStack.back();
-                directoryStack.pop_back();
+                iconTextureID = textFileIconTextureID;
+            }
+            else if (extension == ".png")
+            {
+                iconTextureID = pngFileIconTextureID;
+            }
+            else if (extension == ".jpg" || extension == ".jpeg")
+            {
+                iconTextureID = jpgFileIconTextureID;
             }
         }
 
-        if (ImGui::ImageButton((void *)(intptr_t)importArrowIconTextureID, ImVec2(32.0f, 32.0f), ImVec2(0, 0), ImVec2(1, 1), 0, ImVec4(0, 0, 0, 0)))
+        ImGui::Image((void *)(intptr_t)iconTextureID, ImVec2(itemSize, itemSize));
+
+        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
-            ImportAsset();
-        }
-
-        if (ImGui::BeginPopupContextWindow("Sources Context Menu"))
-        {
-            if (ImGui::MenuItem("Create Folder"))
-            {
-                CreateFolder();
-            }
-            if (ImGui::MenuItem("New Player Controller"))
-            {
-                CreatePlayerController();
-            }
-            ImGui::EndPopup();
-        }
-
-        ImGui::Separator();
-
-        int columns = 10;
-        ImGui::Columns(columns, nullptr, false);
-
-        for (const auto &item : items)
-        {
-            GLuint iconTextureID = attachmentIconTextureID;
-
             if (item.is_directory())
             {
-                iconTextureID = folderIconTextureID;
+                directoryStack.push_back(currentDirectory);
+                currentDirectory = item.path().string();
             }
             else
             {
-                std::string extension = item.path().extension().string();
-                if (extension == ".txt")
-                {
-                    iconTextureID = textFileIconTextureID;
-                }
-                else if (extension == ".png")
-                {
-                    iconTextureID = pngFileIconTextureID;
-                }
-                else if (extension == ".jpg" || extension == ".jpeg")
-                {
-                    iconTextureID = jpgFileIconTextureID;
-                }
+                selectedAsset = item.path().string();
             }
-
-            ImGui::Image((void *)(intptr_t)iconTextureID, ImVec2(itemSize, itemSize));
-
-            if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-            {
-                if (item.is_directory())
-                {
-                    directoryStack.push_back(currentDirectory);
-                    currentDirectory = item.path().string();
-                }
-                else
-                {
-                    selectedAsset = item.path().string();
-                }
-            }
-
-            ImGui::TextWrapped(item.path().filename().string().c_str());
-            ImGui::NextColumn();
         }
+
+        ImGui::TextWrapped(item.path().filename().string().c_str());
+        ImGui::NextColumn();
     }
-    ImGui::EndChild();
+
     ImGui::PopStyleColor(3);
 }
 
