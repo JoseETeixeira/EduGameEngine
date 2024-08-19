@@ -32,6 +32,7 @@ env.Append(CPPPATH=[
     'include/nfd/src/include',     # Path to Native File Dialog include directory
     'include/nanosvg/src',         # Path to NanoSVG include directory
     'include/entt',                # Path to EnTT include directory
+    'include/nlohmann',  
 ])
 
 # Library paths for GLFW, GLEW, and OpenGL

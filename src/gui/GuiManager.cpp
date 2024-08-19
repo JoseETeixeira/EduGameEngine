@@ -17,6 +17,7 @@
 #include <glm.hpp>
 #include <GLFW/glfw3.h>
 #include "../ecs/MovementSystem.h"
+#include <json.hpp>
 
 // Icons
 #include "icons/attachment_icon.h"
@@ -260,13 +261,15 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
     {
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("New"))
+            if (ImGui::MenuItem("New Project"))
             { /* Handle new action */
+            CreateNewProject();
             }
-            if (ImGui::MenuItem("Open"))
+            if (ImGui::MenuItem("Open Project"))
             { /* Handle open action */
+            OpenProject();
             }
-            if (ImGui::MenuItem("Save"))
+            if (ImGui::MenuItem("Save Project"))
             { /* Handle save action */
             }
             ImGui::EndMenu();
@@ -335,6 +338,109 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
     }
     ImGui::End();
     ImGui::PopStyleColor();
+}
+
+// Function to create a new project
+void GUIManager::CreateNewProject()
+{
+    nfdu8char_t *outPath = NULL;
+    nfdresult_t result = NFD_PickFolderU8(&outPath, NULL);
+    if (result == NFD_OKAY)
+    {
+        std::string projectDir(outPath);
+        std::string projectFilePath = projectDir + "/project.ege";
+        std::free(outPath);
+
+        // Create a new .ege file with default content
+        std::ofstream file(projectFilePath);
+        file << R"({
+            "project_name": "NewEduGameProject",
+            "version": "1.0",
+            "main_scene": "scenes/main.escn",
+            "scenes": ["scenes/main.escn"],
+            "plugins": [],
+            "dependencies": {}
+        })";
+        file.close();
+
+        // Notify the user
+        ImGui::OpenPopup("Project Created");
+
+        // You can create the scenes directory and main scene file here as well
+        std::filesystem::create_directory(projectDir + "/scenes");
+        std::ofstream mainSceneFile(projectDir + "/scenes/main.escn");
+        mainSceneFile << R"({
+            "scene_name": "MainScene",
+            "objects": [],
+            "sub_scenes": [],
+            "scripts": []
+        })";
+        mainSceneFile.close();
+    }
+    else if (result == NFD_CANCEL)
+    {
+        std::cout << "User canceled." << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error: " << NFD_GetError() << std::endl;
+    }
+}
+
+// Function to open an existing project
+void GUIManager::OpenProject()
+{
+    nfdu8char_t *outPath = NULL;
+    const nfdu8filteritem_t filterItem[1] = {{"EduGameEngine Project", "ege"}};
+    nfdresult_t result = NFD_OpenDialogU8(&outPath, filterItem, 1, NULL);
+
+    if (result == NFD_OKAY)
+    {
+        std::string projectFilePath(outPath);
+        std::free(outPath);
+
+        // Load the .ege file content
+        std::ifstream file(projectFilePath);
+        if (file.is_open())
+        {
+            nlohmann::json projectJson;
+            file >> projectJson;
+            file.close();
+
+            // Open the main scene specified in the .ege file
+            std::string mainScenePath = projectJson["main_scene"];
+            LoadScene(mainScenePath); // Implement this function to load the scene
+
+            // Notify the user
+            ImGui::OpenPopup("Project Loaded");
+        }
+        else
+        {
+            std::cerr << "Failed to open project file." << std::endl;
+        }
+    }
+    else if (result == NFD_CANCEL)
+    {
+        std::cout << "User canceled." << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error: " << NFD_GetError() << std::endl;
+    }
+}
+
+// Function to save the current project
+void GUIManager::SaveProject()
+{
+    // Implement saving the current project state back to the .ege file
+    // This could involve writing any unsaved changes to scenes, objects, etc.
+}
+
+// Function to load a scene from a file path
+void GUIManager::LoadScene(const std::string &scenePath)
+{
+    // Implement logic to load the scene from the .escn file
+    // This would include reading the file and creating objects, components, etc.
 }
 
 void GUIManager::RenderOutlinePanel()

@@ -52,4 +52,8 @@ private:
     void RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     void RenderDetailsPanel();
     void Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
+    void OpenProject();
+    void CreateNewProject();
+    void SaveProject();
+    void LoadScene(const std::string &scenePath);
 };
