@@ -418,6 +418,16 @@ void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectio
                 // Debug: Check if the scene is being rendered
                 std::cout << "Rendering Scene" << std::endl;
 
+                ImVec2 windowPos = ImGui::GetWindowPos();
+                ImVec2 windowSize = ImGui::GetWindowSize();
+                // Set the viewport to the current ImGui window size and position
+                glViewport(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
+                           static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
+
+                // Set the scissor box to match the current ImGui window
+                glScissor(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
+                          static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
+
                 // Render the scene
                 renderer->Render(scene, viewMatrix, projectionMatrix);
 
