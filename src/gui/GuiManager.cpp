@@ -276,26 +276,6 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Edit"))
-        {
-            if (ImGui::MenuItem("Undo"))
-            {
-                // Handle undo action
-            }
-            if (ImGui::MenuItem("Redo"))
-            {
-                // Handle redo action
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Window"))
-        {
-            if (ImGui::MenuItem("Settings"))
-            {
-                // Handle settings action
-            }
-            ImGui::EndMenu();
-        }
         ImGui::EndMainMenuBar();
     }
 
@@ -341,33 +321,42 @@ void GUIManager::RenderEditorGUI(glm::mat4 viewMatrix, glm::mat4 projectionMatri
         ImGui::EndChild();
 
         // Content Drawer Button
-        ImGui::SetCursorPosY(remainingHeight - 30); // Adjust the position to the bottom
-        if (ImGui::Button("Content Drawer", ImVec2(ImGui::GetIO().DisplaySize.x, 30)))
+        if (!contentDrawerOpen)
         {
-            contentDrawerOpen = !contentDrawerOpen; // Toggle the drawer open state
+            ImGui::SetCursorPosY(remainingHeight - 30); // Adjust the position to the bottom
+            if (ImGui::Button("Open Drawer", ImVec2(ImGui::GetIO().DisplaySize.x / 5, 30)))
+            {
+                contentDrawerOpen = !contentDrawerOpen; // Toggle the drawer open state
+            }
         }
     }
     ImGui::End();
     ImGui::PopStyleColor();
 
-    // 4. Animate and render the Sources panel
-    static float animOffset = 0.0f;
-    static const float animSpeed = 200.0f;                                                 // Pixels per second
-    float targetPosY = ImGui::GetIO().DisplaySize.y - (contentDrawerOpen ? 300.0f : 0.0f); // Target Y position based on the drawer state
-
-    // Smoothly animate towards the target position
-    animOffset += (targetPosY - animOffset) * animSpeed * ImGui::GetIO().DeltaTime;
-    ImVec2 drawerPos = ImVec2(0, animOffset);
-
-    ImGui::SetNextWindowPos(drawerPos);
+    // 4. Force render the Sources panel at a fixed position for testing
+    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 300));    // Fixed position at the bottom
     ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 300));       // Fixed height for the drawer
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 0.95f)); // Dark semi-transparent background for the drawer
 
-    ImGui::Begin("SourcesDrawer", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse);
+    if (contentDrawerOpen)
     {
-        RenderSources(); // Render the Sources content here
+        ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 300));    // Position at the bottom
+        ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, 300));       // Fixed height for the drawer
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 0.95f)); // Dark semi-transparent background for the drawer
+
+        ImGui::Begin("SourcesDrawer", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse);
+        {
+            if (ImGui::Button("Close Drawer", ImVec2(ImGui::GetIO().DisplaySize.x / 5, 30)))
+            {
+                contentDrawerOpen = !contentDrawerOpen; // Toggle the drawer open state
+            }
+            RenderSources(); // Render the Sources content here
+        }
+        ImGui::End();
+
+        ImGui::PopStyleColor();
     }
-    ImGui::End();
+
     ImGui::PopStyleColor();
 }
 
