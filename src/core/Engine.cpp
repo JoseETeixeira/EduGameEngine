@@ -44,7 +44,8 @@ bool Engine::Initialize()
 
     scene = new Scene();
     // Initialize scene, load resources, etc.
-
+    guiManager->scene = scene;
+    guiManager->renderer = renderer;
     return true;
 }
 
@@ -75,8 +76,7 @@ void Engine::Run()
         }
 
         guiManager->NewFrame(viewMatrix, projectionMatrix);
-        scene->Update();
-        renderer->Render(scene);
+
         guiManager->Render(viewMatrix, projectionMatrix);
 
         window->SwapBuffers();

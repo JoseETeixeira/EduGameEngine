@@ -9,7 +9,7 @@ public:
     ~Renderer();
 
     bool Initialize(Window *window);
-    void Render(Scene *scene);
+    void Render(Scene *scene, glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
 
 private:
     int width, height;

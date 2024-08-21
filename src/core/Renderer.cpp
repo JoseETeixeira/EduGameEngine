@@ -27,11 +27,24 @@ bool Renderer::Initialize(Window *window)
     return true;
 }
 
-void Renderer::Render(Scene *scene)
+void Renderer::Render(Scene *scene, glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
+    // Debug: Check if the renderer is rendering the scene
+    std::cout << "Renderer: Rendering Scene" << std::endl;
+
+    // Ensure the depth test is enabled
+    glEnable(GL_DEPTH_TEST);
+
+    // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Render scene
+    // Render the scene
+    scene->Draw(viewMatrix, projectionMatrix);
 
-    // Example: scene->Draw();
+    // Check for any OpenGL errors
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "OpenGL Error: " << error << std::endl;
+    }
 }

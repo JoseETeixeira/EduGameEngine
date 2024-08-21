@@ -84,7 +84,8 @@
     "cinttypes": "cpp",
     "variant": "cpp",
     "numbers": "cpp",
-    "span": "cpp"
+    "span": "cpp",
+    "csetjmp": "cpp"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",

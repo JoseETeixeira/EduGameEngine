@@ -2,10 +2,16 @@
 #include "../core/Engine.h"
 #include "../core/Window.h"
 #include "../camera/camera.h"
+#include "../core/Renderer.h"
+#include "../scene/Scene.h"
 // GUIManager.h
 #include <string>
 #include <vector>
 #include <glm.hpp>
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 class Engine;
 
@@ -22,8 +28,9 @@ public:
     Camera camera;
     bool firstMouse;
     float lastX, lastY;
-    void RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
     Engine *engine;
+    Scene *scene;
+    Renderer *renderer;
 
 private:
     struct Asset
@@ -34,7 +41,6 @@ private:
 
     std::vector<Asset> assets;
     std::string selectedAsset;
-
     bool isPlaying;
     GLint viewport[4];
     GLint scissorBox[4];

@@ -37,85 +37,6 @@ GLuint attachmentIconTextureID;
 GLuint arrowUpIconTextureID;
 GLuint importArrowIconTextureID;
 
-// Function to compile shaders
-GLuint CompileShader(const char *source, GLenum shaderType)
-{
-    GLuint shader = glCreateShader(shaderType);
-    glShaderSource(shader, 1, &source, nullptr);
-    glCompileShader(shader);
-
-    // Check for compilation errors
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[512];
-        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cout << "ERROR::SHADER::COMPILATION_FAILED\n"
-                  << infoLog << std::endl;
-    }
-
-    return shader;
-}
-
-// Function to create a shader program
-GLuint CreateShaderProgram()
-{
-    // Vertex Shader source code
-    const char *vertexShaderSource = R"(
-    #version 330 core
-    layout (location = 0) in vec3 aPos;
-
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
-
-    void main() {
-        gl_Position = projection * view * model * vec4(aPos, 1.0);
-    }
-    )";
-
-    // Fragment Shader source code
-    // Fragment Shader source code
-    const char *fragmentShaderSource = R"(
-    #version 330 core
-    out vec4 FragColor;
-
-    void main() {
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Set the fragment color to bright red
-    }
-    )";
-
-    // Compile vertex shader
-    GLuint vertexShader = CompileShader(vertexShaderSource, GL_VERTEX_SHADER);
-
-    // Compile fragment shader
-    GLuint fragmentShader = CompileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
-
-    // Link shaders into a shader program
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    // Check for linking errors
-    GLint success;
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        char infoLog[512];
-        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
-                  << infoLog << std::endl;
-    }
-
-    // Clean up shaders as they are now linked into the program
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    return shaderProgram;
-}
-
 void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset)
 {
     GUIManager *guiManager = static_cast<GUIManager *>(glfwGetWindowUserPointer(window));
@@ -195,6 +116,7 @@ GUIManager::GUIManager()
 
 GUIManager::~GUIManager()
 {
+    delete scene; // Clean up the scen
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -493,8 +415,11 @@ void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectio
                 // Ensure the grid is rendered within the ImGui window
                 Render3DGrid(viewMatrix, projectionMatrix);
 
-                // Render the cube after setting the viewport
-                RenderTestCube(viewMatrix, projectionMatrix);
+                // Debug: Check if the scene is being rendered
+                std::cout << "Rendering Scene" << std::endl;
+
+                // Render the scene
+                renderer->Render(scene, viewMatrix, projectionMatrix);
 
                 ImGui::EndTabItem();
             }
@@ -548,101 +473,6 @@ void GUIManager::Render3DGrid(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
     glDisable(GL_DEPTH_TEST);
     ImGuizmo::DrawGrid(glm::value_ptr(viewMatrix), glm::value_ptr(projectionMatrix), glm::value_ptr(identity), 100.0f);
     glEnable(GL_DEPTH_TEST);
-}
-
-void GUIManager::RenderTestCube(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
-{
-    static auto cubeEntity = engine->registry.create();
-    static bool initialized = false;
-
-    if (!initialized)
-    {
-        engine->registry.emplace<PositionComponent>(cubeEntity, glm::vec3(0.0f, 0.0f, 0.0f));
-        engine->registry.emplace<VelocityComponent>(cubeEntity, glm::vec3(1.0f, 1.0f, 0.0f));
-        initialized = true;
-    }
-
-    // Retrieve the position from the PositionComponent
-    auto &position = engine->registry.get<PositionComponent>(cubeEntity);
-
-    // Render the test cube within the Scene tab
-    ImVec2 windowPos = ImGui::GetWindowPos();
-    ImVec2 windowSize = ImGui::GetWindowSize();
-    // Set the viewport to the current ImGui window size and position
-    glViewport(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
-               static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
-
-    // Set the scissor box to match the current ImGui window
-    glScissor(static_cast<GLsizei>(windowPos.x), static_cast<GLsizei>(windowPos.y),
-              static_cast<GLsizei>(windowSize.x), static_cast<GLsizei>(windowSize.y));
-
-    glEnable(GL_SCISSOR_TEST);
-
-    // Clear the color and depth buffers
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Enable depth testing
-    glEnable(GL_DEPTH_TEST);
-
-    // Create and use the shader program
-    GLuint shaderProgram = CreateShaderProgram();
-    glUseProgram(shaderProgram);
-
-    // Define the cube vertices
-    float vertices[] = {
-        -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f, 0.5f,
-        -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f,
-        0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f,
-        -0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f, -0.5f,
-        -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f};
-
-    // Generate and bind VAO and VBO
-    GLuint VAO, VBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-    glEnableVertexAttribArray(0);
-
-    // Set the uniforms for the shader
-    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-    GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-    GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
-
-    // Update the model matrix with the current position
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, position.position);
-    model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-
-    // Draw the cube
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
-    // Unbind the VAO
-    glBindVertexArray(0);
-
-    // Disable depth testing after rendering
-    glDisable(GL_DEPTH_TEST);
-
-    // Clean up
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);
-
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cout << "OpenGL Error: " << error << std::endl;
-    }
 }
 
 void GUIManager::ProcessInput(GLFWwindow *window, float deltaTime)
@@ -809,16 +639,15 @@ void GUIManager::ImportAsset()
     const nfdu8filteritem_t filterItem[3] = {
         {"Image Files", "png,jpg"},
         {"Object Files", "obj"},
-    };
+        {"3D Model Files", "obj,fbx"}};
 
-    nfdresult_t result = NFD_OpenDialogU8(&outPath, filterItem, 2, NULL); // Filter for relevant asset types
+    nfdresult_t result = NFD_OpenDialogU8(&outPath, filterItem, 3, NULL); // Include .fbx filter
     if (result == NFD_OKAY)
     {
         std::string assetPath(reinterpret_cast<char *>(outPath));
         free(outPath); // Free memory allocated by NFD
 
-        // Implement your logic to import and handle the asset
-        AddAssetToScene(assetPath);
+        AddAssetToScene(outPath);
     }
     else if (result == NFD_CANCEL)
     {
@@ -832,8 +661,19 @@ void GUIManager::ImportAsset()
 
 void GUIManager::AddAssetToScene(const std::string &assetPath)
 {
-    // Implement the logic to add the asset to the scene or outline
-    // For example, create a new node in the outline and attach the asset to it
+    // Use Assimp to load the model
+    Assimp::Importer importer;
+    const aiScene *scene = importer.ReadFile(assetPath, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        std::cerr << "Error::Assimp:: " << importer.GetErrorString() << std::endl;
+        return;
+    }
+
+    // Process the Assimp scene and add it to our Scene class
+    this->scene->ProcessAssimpScene(scene);
+
     std::cout << "Asset imported: " << assetPath << std::endl;
 }
 

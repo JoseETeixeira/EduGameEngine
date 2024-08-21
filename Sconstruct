@@ -4,11 +4,20 @@ import shutil
 def copy_dll(target, source, env):
     # Path to the GLEW DLL
     glew_dll_path = os.path.join('include', 'glew', 'bin', 'glew32.dll')
+    # Path to Assimp DLL
+    assimp_dll_path = os.path.join('include', 'assimp', 'Assimp', 'bin','x64', 'assimp-vc143-mt.dll')
+    #Path to D3DCompiler DLL
+    d3dcompiler_dll_path = os.path.join('include', 'assimp', 'Assimp', 'bin','x64', 'D3DCompiler_42.dll')
+    #Path to D3Dx9 DLL
+    d3dx9_dll_path = os.path.join('include', 'assimp', 'Assimp', 'bin','x64', 'D3DX9_42.dll')
     # Path to the build directory
     target_dir = os.path.dirname(str(target[0]))
 
     # Copy the DLL to the build directory
     shutil.copy(glew_dll_path, target_dir)
+    shutil.copy(assimp_dll_path, target_dir)
+    shutil.copy(d3dcompiler_dll_path, target_dir)
+    shutil.copy(d3dx9_dll_path, target_dir)
 
 # Environment setup
 env = Environment(CXXFLAGS='/std:c++17')
@@ -32,7 +41,8 @@ env.Append(CPPPATH=[
     'include/nfd/src/include',     # Path to Native File Dialog include directory
     'include/nanosvg/src',         # Path to NanoSVG include directory
     'include/entt',                # Path to EnTT include directory
-    'include/nlohmann',  
+    'include/nlohmann',            # Path to nlohmann json include directory
+    'include/assimp/Assimp/include', # Path to Assimp include directory
 ])
 
 # Library paths for GLFW, GLEW, and OpenGL
@@ -40,6 +50,7 @@ env.Append(LIBPATH=[
     'include/glfw/lib',        # Path to GLFW library directory
     'include/glew/lib',         # Path to GLEW library directory
     'include/nanosvg/lib',      # Path to NanoSVG library directory
+    'include/assimp/Assimp/lib/x64', # Path to Assimp library directory
 ])
 
 # Link the necessary libraries
@@ -56,6 +67,7 @@ env.Append(LIBS=[
     'ole32',       # Link against ole32.lib for COM functions
     'nanosvg',     # NanoSVG library
     'nanosvgrast', # NanoSVG rasterizer library
+    'assimp-vc143-mt', # Assimp library
 ])
 
 # Specify source files
