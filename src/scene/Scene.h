@@ -7,6 +7,7 @@
 #include <glm.hpp>
 #include <assimp/scene.h>
 #include "Mesh.h" // Assuming you have a Mesh class to handle the rendering
+#include <vector>
 
 class Scene
 {
@@ -23,5 +24,8 @@ public:
     void ProcessMesh(aiMesh *mesh, const aiScene *scene);
 
 private:
+    std::vector<Texture> LoadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName);
+    GLuint TextureFromFile(const char *path);
+
     std::vector<Mesh> meshes; // Store all meshes in the scene
 };

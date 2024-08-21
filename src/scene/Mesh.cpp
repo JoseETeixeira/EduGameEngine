@@ -29,28 +29,40 @@ GLuint CreateShaderProgram()
 {
     // Vertex Shader source code
     const char *vertexShaderSource = R"(
-    #version 330 core
-    layout (location = 0) in vec3 aPos;
+       #version 330 core
+        layout (location = 0) in vec3 aPos;
+        layout (location = 1) in vec3 aNormal;
+        layout (location = 2) in vec2 aTexCoords;
 
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
+        out vec2 TexCoords;
 
-    void main() {
-        gl_Position = projection * view * model * vec4(aPos, 1.0);
-    }
-    )";
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 projection;
 
-    // Fragment Shader source code
+        void main()
+        {
+            TexCoords = aTexCoords; // Pass the texture coordinates to the fragment shader
+            gl_Position = projection * view * model * vec4(aPos, 1.0);
+        }
+
+        )";
+
     // Fragment Shader source code
     const char *fragmentShaderSource = R"(
-    #version 330 core
-    out vec4 FragColor;
+        #version 330 core
+        out vec4 FragColor;
 
-    void main() {
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Set the fragment color to bright red
-    }
-    )";
+        in vec2 TexCoords;
+
+        uniform sampler2D texture1; // Texture uniform
+
+        void main()
+        {
+            FragColor = texture(texture1, TexCoords); // Sample the texture
+        }
+
+        )";
 
     // Compile vertex shader
     GLuint vertexShader = CompileShader(vertexShaderSource, GL_VERTEX_SHADER);
@@ -122,34 +134,32 @@ void Mesh::SetupMesh()
 // Method to draw the mesh
 void Mesh::Draw(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
-    // Debug: Check if the shader program is bound correctly
-    GLuint shaderProgram = CreateShaderProgram(); // Ensure you reuse or correctly manage shader programs
+    GLuint shaderProgram = CreateShaderProgram(); // Use the correct shader program
     glUseProgram(shaderProgram);
 
-    // Set the shader uniforms
+    // Set shader uniforms
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
     GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
 
-    // Assuming an identity matrix for the model, or use the actual model transform
-    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 model = glm::mat4(1.0f); // Identity matrix for model
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-    // Bind the VAO
+    // Bind textures
+    for (unsigned int i = 0; i < textures.size(); i++)
+    {
+        glActiveTexture(GL_TEXTURE0 + i);                                                                 // Activate texture unit
+        glBindTexture(GL_TEXTURE_2D, textures[i].id);                                                     // Bind the texture
+        glUniform1i(glGetUniformLocation(shaderProgram, ("texture" + std::to_string(i + 1)).c_str()), i); // Pass texture unit to shader
+    }
+
+    // Bind VAO and draw the mesh
     glBindVertexArray(VAO);
-
-    // Draw the mesh
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-
-    // Unbind the VAO
     glBindVertexArray(0);
 
-    // Check for OpenGL errors
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Mesh: OpenGL Error: " << error << std::endl;
-    }
+    // Unbind textures
+    glActiveTexture(GL_TEXTURE0);
 }

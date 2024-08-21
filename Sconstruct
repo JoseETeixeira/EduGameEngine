@@ -43,6 +43,7 @@ env.Append(CPPPATH=[
     'include/entt',                # Path to EnTT include directory
     'include/nlohmann',            # Path to nlohmann json include directory
     'include/assimp/Assimp/include', # Path to Assimp include directory
+    'include/stb',                 # Path to stb include directory
 ])
 
 # Library paths for GLFW, GLEW, and OpenGL
