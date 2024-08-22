@@ -123,28 +123,6 @@ GUIManager::~GUIManager()
     ImGui::DestroyContext();
 }
 
-void GUIManager::RenderTransformButtons()
-{
-    ImGui::Begin("Transform Mode");
-
-    if (ImGui::Button("Translate"))
-    {
-        currentTransformMode = TransformMode::TRANSLATE;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Rotate"))
-    {
-        currentTransformMode = TransformMode::ROTATE;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Scale"))
-    {
-        currentTransformMode = TransformMode::SCALE;
-    }
-
-    ImGui::End();
-}
-
 void GUIManager::ApplyTransformation(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
     if (selectedEntity != entt::null) // Check if an entity is selected
@@ -525,7 +503,20 @@ void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectio
         {
             if (ImGui::BeginTabItem("Scene"))
             {
-                RenderTransformButtons(); // Render the transform buttons
+                if (ImGui::Button("Translate"))
+                {
+                    currentTransformMode = TransformMode::TRANSLATE;
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Rotate"))
+                {
+                    currentTransformMode = TransformMode::ROTATE;
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Scale"))
+                {
+                    currentTransformMode = TransformMode::SCALE;
+                } // Render the transform buttons
 
                 // Ensure the grid is rendered within the ImGui window
                 Render3DGrid(viewMatrix, projectionMatrix);

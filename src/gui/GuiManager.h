@@ -78,7 +78,6 @@ private:
     void SaveProject();
     void LoadScene(const std::string &scenePath);
     bool contentDrawerOpen;
-    void RenderTransformButtons();                                              // Add this method
     void ApplyTransformation(glm::mat4 viewMatrix, glm::mat4 projectionMatrix); // Add this method
     void RenderEntityNode(entt::entity entity, TransformComponent &transform);
 };
