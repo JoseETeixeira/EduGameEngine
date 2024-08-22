@@ -17,6 +17,7 @@
 #include <glm.hpp>
 #include <GLFW/glfw3.h>
 #include "../ecs/MovementSystem.h"
+#include "../ecs/NameComponent.h"
 #include <json.hpp>
 
 // Icons
@@ -105,7 +106,7 @@ void GUIManager::InitializeIcons()
 }
 
 GUIManager::GUIManager()
-    : camera(glm::vec3(0.0f, 5.0f, 15.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f), firstMouse(true), lastX(400), lastY(300)
+    : camera(glm::vec3(0.0f, 5.0f, 15.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f), firstMouse(true), lastX(400), lastY(300), currentTransformMode(TransformMode::TRANSLATE), objectSelected(false)
 {
     isPlaying = false;
     // Adjust the camera's initial position and orientation to better view the grid
@@ -120,6 +121,73 @@ GUIManager::~GUIManager()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+}
+
+void GUIManager::RenderTransformButtons()
+{
+    ImGui::Begin("Transform Mode");
+
+    if (ImGui::Button("Translate"))
+    {
+        currentTransformMode = TransformMode::TRANSLATE;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Rotate"))
+    {
+        currentTransformMode = TransformMode::ROTATE;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Scale"))
+    {
+        currentTransformMode = TransformMode::SCALE;
+    }
+
+    ImGui::End();
+}
+
+void GUIManager::ApplyTransformation(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
+{
+    if (selectedEntity != entt::null) // Check if an entity is selected
+    {
+        ImGuizmo::SetOrthographic(false);
+        ImGuizmo::SetDrawlist();
+
+        ImVec2 windowPos = ImGui::GetWindowPos();
+        ImVec2 windowSize = ImGui::GetWindowSize();
+        ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
+
+        ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+        if (currentTransformMode == TransformMode::TRANSLATE)
+            operation = ImGuizmo::TRANSLATE;
+        else if (currentTransformMode == TransformMode::ROTATE)
+            operation = ImGuizmo::ROTATE;
+        else if (currentTransformMode == TransformMode::SCALE)
+            operation = ImGuizmo::SCALE;
+
+        // Accessing the TransformComponent from the registry
+        if (registry->valid(selectedEntity))
+        {
+            auto &transform = registry->get<TransformComponent>(selectedEntity);
+            selectedObjectTransform = glm::translate(glm::mat4(1.0f), transform.position) *
+                                      glm::rotate(glm::mat4(1.0f), glm::radians(transform.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
+                                      glm::rotate(glm::mat4(1.0f), glm::radians(transform.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                                      glm::rotate(glm::mat4(1.0f), glm::radians(transform.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)) *
+                                      glm::scale(glm::mat4(1.0f), transform.scale);
+
+            ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projectionMatrix),
+                                 operation, ImGuizmo::LOCAL, glm::value_ptr(selectedObjectTransform));
+
+            // Update the entity's transform component
+            glm::vec3 translation, rotation, scale;
+            ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(selectedObjectTransform),
+                                                  glm::value_ptr(translation),
+                                                  glm::value_ptr(rotation),
+                                                  glm::value_ptr(scale));
+            transform.position = translation;
+            transform.rotation = rotation;
+            transform.scale = scale;
+        }
+    }
 }
 
 bool GUIManager::Initialize(Window *window)
@@ -390,20 +458,65 @@ void GUIManager::RenderOutlinePanel()
     ImGui::BeginChild("Outline", ImVec2(0, 0), true);
     {
         ImGui::Text("Outline");
-        if (ImGui::TreeNode("Node1"))
-        {
-            ImGui::Text("Node1 Child");
-            ImGui::TreePop();
-        }
-        if (ImGui::TreeNode("Node2"))
-        {
-            ImGui::Text("Node2 Child");
-            ImGui::TreePop();
-        }
+
+        // Render all entities in the scene
+        registry->view<TransformComponent>().each([&](auto entity, TransformComponent &transform)
+                                                  {
+            if (transform.parent == entt::null) // Check if the entity is at the root
+            {
+                RenderEntityNode(entity, transform);
+            } });
     }
     ImGui::EndChild();
 }
 
+void GUIManager::RenderEntityNode(entt::entity entity, TransformComponent &transform)
+{
+    // Ensure NameComponent exists before accessing it
+    if (registry->all_of<NameComponent>(entity))
+    {
+        auto &name = registry->get<NameComponent>(entity).name;
+
+        ImGuiTreeNodeFlags flags = ((selectedEntity == entity) ? ImGuiTreeNodeFlags_Selected : 0);
+        flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+
+        bool opened = ImGui::TreeNodeEx((void *)(intptr_t)entity, flags, name.c_str());
+
+        if (ImGui::IsItemClicked())
+        {
+            selectedEntity = entity;
+        }
+
+        if (ImGui::BeginDragDropSource())
+        {
+            ImGui::SetDragDropPayload("REORDER_ENTITY", &entity, sizeof(entt::entity));
+            ImGui::Text("Reparent %s", name.c_str());
+            ImGui::EndDragDropSource();
+        }
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("REORDER_ENTITY"))
+            {
+                entt::entity droppedEntity = *(const entt::entity *)payload->Data;
+                registry->get<TransformComponent>(droppedEntity).parent = entity;
+            }
+            ImGui::EndDragDropTarget();
+        }
+
+        if (opened)
+        {
+            // Render children
+            registry->view<TransformComponent>().each([&](auto childEntity, TransformComponent &childTransform)
+                                                      {
+                if (childTransform.parent == entity) {
+                    RenderEntityNode(childEntity, childTransform);
+                } });
+
+            ImGui::TreePop();
+        }
+    }
+}
 void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 {
     ImGui::BeginChild("Main Editor", ImVec2(0, 0), true);
@@ -412,6 +525,8 @@ void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectio
         {
             if (ImGui::BeginTabItem("Scene"))
             {
+                RenderTransformButtons(); // Render the transform buttons
+
                 // Ensure the grid is rendered within the ImGui window
                 Render3DGrid(viewMatrix, projectionMatrix);
 
@@ -430,6 +545,9 @@ void GUIManager::RenderMainEditorPanel(glm::mat4 viewMatrix, glm::mat4 projectio
 
                 // Render the scene
                 renderer->Render(scene, viewMatrix, projectionMatrix);
+
+                // Apply transformations to the selected object
+                ApplyTransformation(viewMatrix, projectionMatrix);
 
                 ImGui::EndTabItem();
             }

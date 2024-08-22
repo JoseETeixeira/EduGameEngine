@@ -8,8 +8,11 @@
 #include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <entt.hpp>
+#include "../ecs/MovementSystem.h"
+#include "../ecs/NameComponent.h"
 
-Scene::Scene()
+Scene::Scene(entt::registry *registry) : registry(registry)
 {
     // Initialize game objects, load resources, etc.
 }
@@ -123,7 +126,17 @@ void Scene::ProcessMesh(aiMesh *mesh, const aiScene *scene)
         textures.push_back(texture);
     }
 
-    Mesh newMesh(vertices, indices, textures);
+    static entt::entity meshEntity = entt::null;
+    bool initialized = false;
+    if (!initialized)
+    {
+        meshEntity = registry->create();
+        registry->emplace<TransformComponent>(meshEntity, glm::vec3(0.0f, 0.0f, 0.0f));
+        registry->emplace<NameComponent>(meshEntity, "Mesh");
+        initialized = true;
+    }
+
+    Mesh newMesh(vertices, indices, textures, registry, meshEntity);
     AddMesh(newMesh);
 }
 

@@ -85,7 +85,10 @@
     "variant": "cpp",
     "numbers": "cpp",
     "span": "cpp",
-    "csetjmp": "cpp"
+    "csetjmp": "cpp",
+    "any": "cpp",
+    "valarray": "cpp",
+    "ranges": "cpp"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",
@@ -126,10 +129,7 @@
   "C_Cpp_Runner.compilerArgs": [],
   "C_Cpp_Runner.linkerArgs": [],
   "C_Cpp_Runner.includePaths": [],
-  "C_Cpp_Runner.includeSearch": [
-    "*",
-    "**/*"
-  ],
+  "C_Cpp_Runner.includeSearch": ["*", "**/*"],
   "C_Cpp_Runner.excludeSearch": [
     "**/build",
     "**/build/**",

@@ -4,6 +4,7 @@
 #include "../camera/camera.h"
 #include "../core/Renderer.h"
 #include "../scene/Scene.h"
+#include "../ecs/MovementSystem.h"
 // GUIManager.h
 #include <string>
 #include <vector>
@@ -13,7 +14,16 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include <entt.hpp>
+
 class Engine;
+
+enum class TransformMode
+{
+    TRANSLATE,
+    ROTATE,
+    SCALE
+};
 
 class GUIManager
 {
@@ -31,6 +41,11 @@ public:
     Engine *engine;
     Scene *scene;
     Renderer *renderer;
+    entt::registry *registry;
+    TransformMode currentTransformMode;
+    bool objectSelected;
+    glm::mat4 selectedObjectTransform;        // Store the transform of the selected object
+    entt::entity selectedEntity = entt::null; // Track the selected entity
 
 private:
     struct Asset
@@ -63,4 +78,7 @@ private:
     void SaveProject();
     void LoadScene(const std::string &scenePath);
     bool contentDrawerOpen;
+    void RenderTransformButtons();                                              // Add this method
+    void ApplyTransformation(glm::mat4 viewMatrix, glm::mat4 projectionMatrix); // Add this method
+    void RenderEntityNode(entt::entity entity, TransformComponent &transform);
 };

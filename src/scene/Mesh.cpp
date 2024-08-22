@@ -1,7 +1,9 @@
 #include "Mesh.h"
+#include "../ecs/MovementSystem.h"
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
 #include <iostream>
+#include <glm.hpp>
 
 // Function to compile shaders
 GLuint CompileShader(const char *source, GLenum shaderType)
@@ -95,8 +97,8 @@ GLuint CreateShaderProgram()
 }
 
 // Constructor
-Mesh::Mesh(const std::vector<Vertex> &vertices, const std::vector<unsigned int> &indices, const std::vector<Texture> &textures)
-    : vertices(vertices), indices(indices), textures(textures)
+Mesh::Mesh(const std::vector<Vertex> &vertices, const std::vector<unsigned int> &indices, const std::vector<Texture> &textures, entt::registry *registry, entt::entity entity)
+    : vertices(vertices), indices(indices), textures(textures), registry(registry), entity(entity)
 {
     SetupMesh();
 }
@@ -137,12 +139,21 @@ void Mesh::Draw(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
     GLuint shaderProgram = CreateShaderProgram(); // Use the correct shader program
     glUseProgram(shaderProgram);
 
+    // Retrieve the transform from the TransformComponent of the entity
+    auto &transform = registry->get<TransformComponent>(entity);
+
+    // Calculate the model matrix from the transform component
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), transform.position) *
+                      glm::rotate(glm::mat4(1.0f), glm::radians(transform.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
+                      glm::rotate(glm::mat4(1.0f), glm::radians(transform.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                      glm::rotate(glm::mat4(1.0f), glm::radians(transform.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f)) *
+                      glm::scale(glm::mat4(1.0f), transform.scale);
+
     // Set shader uniforms
     GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
     GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
     GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
 
-    glm::mat4 model = glm::mat4(1.0f); // Identity matrix for model
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
@@ -157,7 +168,7 @@ void Mesh::Draw(glm::mat4 viewMatrix, glm::mat4 projectionMatrix)
 
     // Bind VAO and draw the mesh
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
     // Unbind textures

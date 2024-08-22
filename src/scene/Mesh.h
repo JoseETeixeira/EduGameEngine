@@ -4,6 +4,7 @@
 #include <vector>
 #include <GL/glew.h>
 #include <string>
+#include <entt.hpp>
 
 struct Vertex
 {
@@ -26,10 +27,12 @@ public:
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
 
-    Mesh(const std::vector<Vertex> &vertices, const std::vector<unsigned int> &indices, const std::vector<Texture> &textures);
+    Mesh(const std::vector<Vertex> &vertices, const std::vector<unsigned int> &indices, const std::vector<Texture> &textures, entt::registry *registry, entt::entity entity);
     void Draw(glm::mat4 viewMatrix, glm::mat4 projectionMatrix);
 
 private:
     GLuint VAO, VBO, EBO;
     void SetupMesh();
+    entt::registry *registry;
+    entt::entity entity;
 };

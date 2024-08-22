@@ -41,8 +41,9 @@ bool Engine::Initialize()
         return false;
     }
     guiManager->engine = this;
+    guiManager->registry = &registry;
 
-    scene = new Scene();
+    scene = new Scene(&registry);
     // Initialize scene, load resources, etc.
     guiManager->scene = scene;
     guiManager->renderer = renderer;

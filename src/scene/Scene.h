@@ -8,11 +8,12 @@
 #include <assimp/scene.h>
 #include "Mesh.h" // Assuming you have a Mesh class to handle the rendering
 #include <vector>
+#include <entt.hpp>
 
 class Scene
 {
 public:
-    Scene();
+    Scene(entt::registry *registry);
     ~Scene();
 
     void Update();
@@ -26,6 +27,6 @@ public:
 private:
     std::vector<Texture> LoadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName);
     GLuint TextureFromFile(const char *path);
-
+    entt::registry *registry;
     std::vector<Mesh> meshes; // Store all meshes in the scene
 };
